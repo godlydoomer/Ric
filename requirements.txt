@@ -1,0 +1,8 @@
+aiogram
+faker
+python-barcode
+pillow
+requests
+beautifulsoup4
+fpdf2
+aiohttp
