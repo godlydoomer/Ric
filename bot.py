@@ -16,6 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 TOKEN = "9294177492:AAHB37c-tHDGMRN_Ze0ABKls6M2VYHIBSI4"
 
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 fake = Faker('it_IT')
