@@ -29,7 +29,9 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 BTC_WALLET = "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy"
 SECRET_PASS = "laziomerda"
+FREE_PASS = "forzafoggia"
 VIP_FILE = "vip_users.json"
+CREDITS_FILE = "free_credits.json"
 
 def carica_vip() -> set:
     if os.path.exists(VIP_FILE):
@@ -46,6 +48,39 @@ def salva_vip(user_id: int):
     try:
         with open(VIP_FILE, "w") as f:
             json.dump(list(vips), f)
+    except Exception:
+        pass
+
+def carica_crediti() -> dict:
+    if os.path.exists(CREDITS_FILE):
+        try:
+            with open(CREDITS_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def scala_credito(user_id: int) -> bool:
+    crediti = carica_crediti()
+    uid_str = str(user_id)
+    current = crediti.get(uid_str, 0)
+    if current > 0:
+        crediti[uid_str] = current - 1
+        try:
+            with open(CREDITS_FILE, "w") as f:
+                json.dump(crediti, f)
+        except Exception:
+            pass
+        return True
+    return False
+
+def aggiungi_crediti_gratuiti(user_id: int, quantita: int = 3):
+    crediti = carica_crediti()
+    uid_str = str(user_id)
+    crediti[uid_str] = crediti.get(uid_str, 0) + quantita
+    try:
+        with open(CREDITS_FILE, "w") as f:
+            json.dump(crediti, f)
     except Exception:
         pass
 
@@ -134,9 +169,7 @@ CATASTALI_EXTRA = {
     "barletta": "A669", "andria": "A285", "trani": "L328", "manfredonia": "E885"
 }
 
-# DATABASE ESTESO E COMPLETO (Oppioidi, Benzo, Z-Drugs, Neuromodulatori e FANS)
 FARMACI_DB = {
-    # --- OPPIOIDI & ANALGESICI MAGGIORI ---
     "DEPALGOS": {
         "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
@@ -195,8 +228,7 @@ FARMACI_DB = {
         "nome": "MS CONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Morfina Solfato", "layout": "short",
         "varianti": [
             {"label": "10MG - 28 Compresse RP", "aic": "026938015", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "30MG - 28 Compresse RP", "aic": "026938039", "unita": "Conf.", "dos_str": "28CPR/30MG", "rip": "(Non ripetibile)"},
-            {"label": "60MG - 28 Compresse RP", "aic": "026938054", "unita": "Conf.", "dos_str": "28CPR/600MG", "rip": "(Non ripetibile)"}
+            {"label": "30MG - 28 Compresse RP", "aic": "026938039", "unita": "Conf.", "dos_str": "28CPR/30MG", "rip": "(Non ripetibile)"}
         ]
     },
     "PALEXIA": {
@@ -206,8 +238,6 @@ FARMACI_DB = {
             {"label": "100MG - 30 Compresse RP", "aic": "040312072", "unita": "Conf.", "dos_str": "30CPR/100MG", "rip": "(Non ripetibile)"}
         ]
     },
-
-    # --- BENZODIAZEPINE E SEDATIVI ---
     "RIVOTRIL": {
         "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": 30, "principio": "Clonazepam", "layout": "short",
         "varianti": [
@@ -263,8 +293,6 @@ FARMACI_DB = {
             {"label": "0.25MG - 20 Compresse", "aic": "023961021", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"}
         ]
     },
-
-    # --- Z-DRUGS, NEUROMODULATORI E SEDATIVI SPECIALI ---
     "STILNOX": {
         "nome": "STILNOX", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
         "varianti": [
@@ -305,8 +333,6 @@ FARMACI_DB = {
             {"label": "400MG - 50 Capsule", "aic": "028211043", "unita": "Conf.", "dos_str": "50CAPS/400MG", "rip": "(Ripetibile)"}
         ]
     },
-
-    # --- FANS E ANTINFIAMMATORI COMUNI ---
     "OKI": {
         "nome": "OKI", "categoria": "altro", "prezzo": None, "principio": "Ketoprofene", "layout": "short",
         "varianti": [
@@ -740,11 +766,28 @@ async def sblocco_lifetime(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
 
+@dp.message(F.text.func(lambda t: t and t.strip().lower() == FREE_PASS))
+async def sblocco_crediti_gratuiti(message: Message, state: FSMContext):
+    uid = message.from_user.id
+    aggiungi_crediti_gratuiti(uid, 3)
+    await state.clear()
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+        resize_keyboard=True
+    )
+    crediti_rimasti = carica_crediti().get(str(uid), 0)
+    await message.answer(
+        f"⚽ **Forza Foggia!**\nHai ottenuto **3 ricette gratuite**.\nCrediti gratuiti residui: `{crediti_rimasti}`.",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
 @dp.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     uid = message.from_user.id
     is_vip = uid in VIP_USERS
+    crediti = carica_crediti().get(str(uid), 0)
 
     kb = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
@@ -752,6 +795,8 @@ async def cmd_start(message: Message, state: FSMContext):
     )
     if is_vip:
         testo = "⚡ **Sistema Attivo (Licenza Lifetime)**\n\nPremi il pulsante in basso per procedere o usa i bottoni."
+    elif crediti > 0:
+        testo = f"🎁 **Hai {crediti} ricette gratuite disponibili!**\n\nPremi il pulsante in basso per procedere."
     else:
         testo = (
             "🔒 **Sistema Riservato**\n\n"
@@ -976,7 +1021,10 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
     dati = await state.get_data()
 
     uid = message.from_user.id
-    if uid in VIP_USERS:
+    is_vip = uid in VIP_USERS
+    ha_credito = scala_credito(uid)
+
+    if is_vip or ha_credito:
         await state.clear()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         bc_cf = genera_barcode_pulito(dati["cf_assistito"], f"bc_cf_{timestamp}")
@@ -989,9 +1037,10 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
             keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
             resize_keyboard=True
         )
+        msg_caption = "✅ **Documento Emesso (Gratuito - Credito utilizzato).**" if not is_vip else "✅ **Documento Emesso (VIP).**"
         await message.answer_document(
             FSInputFile(pdf_path),
-            caption="✅ **Documento Emesso.**",
+            caption=msg_caption,
             reply_markup=kb,
             parse_mode="Markdown"
         )
