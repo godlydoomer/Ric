@@ -144,16 +144,16 @@ FARMACI_DB = {
         "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
             {"label": "5MG/325MG - 28 Compresse", "aic": "037310014", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)"}
+            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "10MG/325MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "20MG/325MG", "rip": "(Non ripetibile)"}
         ]
     },
     "TARGIN": {
         "nome": "TARGIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Naloxone", "layout": "long",
         "varianti": [
-            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
+            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "10MG/5MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "20MG/10MG", "rip": "(Non ripetibile)"}
         ]
     },
     "CONTRAMAL": {
@@ -167,8 +167,8 @@ FARMACI_DB = {
     "TACHIDOL": {
         "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": 50, "principio": "Paracetamolo+Codeina", "layout": "long",
         "varianti": [
-            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
-            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
+            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "500MG/30MG", "rip": "(Non ripetibile)"},
+            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "500MG/30MG", "rip": "(Non ripetibile)"}
         ]
     },
     "RIVOTRIL": {
@@ -264,7 +264,7 @@ def de_leet_parola(parola: str) -> str:
     return pulita.upper().translate(LEET_MAP)
 
 def separa_nome_attaccato(parola_unica: str) -> str:
-    camel_split = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', parola_unica)
+    camel_split = re.sub(r'([a-z0-9])([A-Z])', r' ', parola_unica)
     if " " in camel_split:
         parti = [de_leet_parola(p) for p in camel_split.split()]
         return " ".join(parti)
@@ -637,11 +637,11 @@ async def sblocco_lifetime(message: Message, state: FSMContext):
     salva_vip(uid)
     await state.clear()
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+        keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
         resize_keyboard=True
     )
     await message.answer(
-        "🔓 **Accesso Lifetime Attivato.**\n"
+        "ð **Accesso Lifetime Attivato.**\n"
         "Paywall disattivato per il tuo account.",
         reply_markup=kb,
         parse_mode="Markdown"
@@ -654,36 +654,36 @@ async def cmd_start(message: Message, state: FSMContext):
     is_vip = uid in VIP_USERS
 
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+        keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
         resize_keyboard=True
     )
     if is_vip:
-        testo = "⚡ **Sistema Attivo (Licenza Lifetime)**\nPremi il pulsante in basso per procedere."
+        testo = "â¡ **Sistema Attivo (Licenza Lifetime)**\nPremi il pulsante in basso per procedere."
     else:
         testo = (
-            "🔒 **Sistema Riservato**\n\n"
+            "ð **Sistema Riservato**\n\n"
             "**Tariffario Emissione Singola:**\n"
-            "• Benzodiazepine: **30€** (BTC)\n"
-            "• Oppioidi: **50€** (BTC)\n"
-            "• Altri farmaci: **Su richiesta al proprietario**\n\n"
+            "â¢ Benzodiazepine: **30â¬** (BTC)\n"
+            "â¢ Oppioidi: **50â¬** (BTC)\n"
+            "â¢ Altri farmaci: **Su richiesta al proprietario**\n\n"
             "Premi il pulsante qui sotto per configurare la richiesta."
         )
     await message.answer(testo, reply_markup=kb, parse_mode="Markdown")
 
-@dp.message(F.text == "📄 Nuova Pratica")
+@dp.message(F.text == "ð Nuova Pratica")
 async def step_paziente(message: Message, state: FSMContext):
     await state.set_state(FormPrescrizione.paziente)
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="❌ Annulla")]],
+        keyboard=[[KeyboardButton(text="â Annulla")]],
         resize_keyboard=True
     )
     await message.answer(
-        "1️⃣ **Inserisci Nome, Cognome, Comune e Data di nascita:**",
+        "1ï¸â£ **Inserisci Nome, Cognome, Comune e Data di nascita:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
 
-@dp.message(F.text == "❌ Annulla")
+@dp.message(F.text == "â Annulla")
 async def annulla_operazione(message: Message, state: FSMContext):
     await cmd_start(message, state)
 
@@ -706,7 +706,7 @@ async def ricevi_paziente(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "2️⃣ **Indica la città di emissione:**",
+        "2ï¸â£ **Indica la cittÃ  di emissione:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -726,7 +726,7 @@ async def ricevi_citta(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "3️⃣ **Indica il prodotto richiesto:**",
+        "3ï¸â£ **Indica il prodotto richiesto:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -745,12 +745,12 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         if not is_vip and categoria == "altro":
             await state.clear()
             kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+                keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
                 resize_keyboard=True
             )
             await message.answer(
-                "⛔ **Prodotto su Richiesta**\n\n"
-                "Per questa tipologia l'emissione automatica è disabilitata.\n"
+                "â **Prodotto su Richiesta**\n\n"
+                "Per questa tipologia l'emissione automatica Ã¨ disabilitata.\n"
                 "Contatta direttamente il proprietario per l'abilitazione.",
                 reply_markup=kb,
                 parse_mode="Markdown"
@@ -770,7 +770,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
         await message.answer(
-            "4️⃣ **Seleziona il formato:**",
+            "4ï¸â£ **Seleziona il formato:**",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -778,26 +778,27 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         if not is_vip:
             await state.clear()
             kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+                keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
                 resize_keyboard=True
             )
             await message.answer(
-                "⛔ **Prodotto Non Abilitato in Automatico**\n\n"
-                "Per questo elemento è necessario contattare direttamente il proprietario.",
+                "â **Prodotto Non Abilitato in Automatico**\n\n"
+                "Per questo elemento Ã¨ necessario contattare direttamente il proprietario.",
                 reply_markup=kb,
                 parse_mode="Markdown"
             )
             return
 
-        nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "PRODOTTO"
+        nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
         varianti_custom = [
-            {"label": "20 Unità 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "20PZ/10MG", "rip": "(Ripetibile)"},
-            {"label": "30 Unità 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "30PZ/20MG", "rip": "(Non ripetibile)"}
+            {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
+            {"label": "30 Compresse 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "30CPR", "dos_str": "20MG", "rip": "(Non ripetibile)"},
+            {"label": "Gocce Orali 2.5MG/ML", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Flac.", "qta_str": "10ML", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
         ]
         await state.update_data(
             farmaco_nome_ufficiale=nome_pulito,
-            farmaco_principio="Specificifica",
-            farmaco_layout="short",
+            farmaco_principio="Principio Attivo",
+            farmaco_layout="long",
             farmaco_categoria="altro",
             farmaco_prezzo=0,
             varianti_correnti=varianti_custom
@@ -805,7 +806,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         botones = [[KeyboardButton(text=v["label"])] for v in varianti_custom]
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
-        await message.answer("4️⃣ **Seleziona il formato:**", reply_markup=kb, parse_mode="Markdown")
+        await message.answer("4ï¸â£ **Seleziona il formato:**", reply_markup=kb, parse_mode="Markdown")
 
 @dp.message(FormPrescrizione.scelta_dosaggio)
 async def ricevi_dosaggio(message: Message, state: FSMContext):
@@ -827,7 +828,7 @@ async def ricevi_dosaggio(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "5️⃣ **Indica la quantità:**",
+        "5ï¸â£ **Indica la quantitÃ :**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -843,13 +844,21 @@ async def ricevi_quantita(message: Message, state: FSMContext):
     var = dati["variante_scelta"]
     unita = var["unita"]
 
+    if princ and princ != "Specificifica" and princ != "Principio Attivo":
+        princ_str = f"({princ})"
+    else:
+        princ_str = ""
+
     if layout == "long":
         riga1 = f"N.{qta_num}{unita} {nome_f}"
-        riga2 = f"({princ}) {var['qta_str']}"
+        riga2 = f"{princ_str} {var.get('qta_str', '')}".strip()
         riga3 = f"{var['dos_str']}"
         riga4 = f"{var['rip']}"
     else:
-        riga1 = f"N.{qta_num}{unita} {nome_f} ({princ}"
+        if princ_str:
+            riga1 = f"N.{qta_num}{unita} {nome_f} {princ_str}"
+        else:
+            riga1 = f"N.{qta_num}{unita} {nome_f}"
         riga2 = f"{var['dos_str']}"
         riga3 = f"{var['rip']}"
         riga4 = None
@@ -874,7 +883,7 @@ async def ricevi_quantita(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "6️⃣ **Conferma o inserisci la data:**",
+        "6ï¸â£ **Conferma o inserisci la data:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -910,12 +919,12 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
         crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
 
         kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+            keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
             resize_keyboard=True
         )
         await message.answer_document(
             FSInputFile(pdf_path),
-            caption="✅ **Documento Emesso.**",
+            caption="â **Documento Emesso.**",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -927,16 +936,16 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
     await state.set_state(FormPrescrizione.attesa_pagamento)
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔄 Verifica Transazione BTC")],
-            [KeyboardButton(text="❌ Annulla")]
+            [KeyboardButton(text="ð Verifica Transazione BTC")],
+            [KeyboardButton(text="â Annulla")]
         ],
         resize_keyboard=True
     )
     await message.answer(
-        f"🔒 **PAGAMENTO RICHIESTO PER IL RILASCIO**\n\n"
-        f"• **Categoria:** {cat_label}\n"
-        f"• **Importo dovuto:** `{prezzo}€` in Bitcoin (BTC)\n\n"
-        f"Invia esattamente **{prezzo}€** in BTC al seguente indirizzo:\n"
+        f"ð **PAGAMENTO RICHIESTO PER IL RILASCIO**\n\n"
+        f"â¢ **Categoria:** {cat_label}\n"
+        f"â¢ **Importo dovuto:** `{prezzo}â¬` in Bitcoin (BTC)\n\n"
+        f"Invia esattamente **{prezzo}â¬** in BTC al seguente indirizzo:\n"
         f"`{BTC_WALLET}`\n\n"
         f"_Dopo aver inviato la transazione sulla rete Bitcoin, incolla qui il **TXID** (Hash della transazione) oppure premi il pulsante di verifica._",
         reply_markup=kb,
@@ -946,7 +955,7 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
 @dp.message(FormPrescrizione.attesa_pagamento)
 async def verifica_pagamento_finto(message: Message, state: FSMContext):
     await message.answer(
-        "⏳ **Transazione non rilevata sulla Blockchain.**\n\n"
+        "â³ **Transazione non rilevata sulla Blockchain.**\n\n"
         f"Assicurati di aver inviato l'importo esatto al wallet:\n`{BTC_WALLET}`\n\n"
         "Attendere almeno 1 conferma di rete o contattare il proprietario fornendo il TXID.",
         parse_mode="Markdown"
