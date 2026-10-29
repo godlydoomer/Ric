@@ -134,8 +134,9 @@ CATASTALI_EXTRA = {
     "barletta": "A669", "andria": "A285", "trani": "L328", "manfredonia": "E885"
 }
 
-# Database esteso con i principi attivi esatti per ogni voce principale
+# DATABASE ESTESO E COMPLETO (Oppioidi, Benzo, Z-Drugs, Neuromodulatori e FANS)
 FARMACI_DB = {
+    # --- OPPIOIDI & ANALGESICI MAGGIORI ---
     "DEPALGOS": {
         "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
@@ -150,6 +151,14 @@ FARMACI_DB = {
             {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
             {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
             {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"}
+        ]
+    },
+    "OXYCONTIN": {
+        "nome": "OXYCONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone", "layout": "short",
+        "varianti": [
+            {"label": "5MG - 28 Compresse RP", "aic": "034789016", "unita": "Conf.", "dos_str": "28CPR/5MG", "rip": "(Non ripetibile)"},
+            {"label": "10MG - 28 Compresse RP", "aic": "034789030", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG - 28 Compresse RP", "aic": "034789055", "unita": "Conf.", "dos_str": "28CPR/20MG", "rip": "(Non ripetibile)"}
         ]
     },
     "CONTRAMAL": {
@@ -174,6 +183,31 @@ FARMACI_DB = {
             {"label": "2.5mg/ml - Sciroppo 180g", "aic": "019482024", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Non ripetibile)"}
         ]
     },
+    "DUROGESIC": {
+        "nome": "DUROGESIC", "categoria": "oppioidi", "prezzo": 50, "principio": "Fentanyl", "layout": "short",
+        "varianti": [
+            {"label": "12MCG/H - 5 Cerotti", "aic": "027092147", "unita": "Conf.", "dos_str": "5CEROTTI/12MCG", "rip": "(Non ripetibile)"},
+            {"label": "25MCG/H - 5 Cerotti", "aic": "027092022", "unita": "Conf.", "dos_str": "5CEROTTI/25MCG", "rip": "(Non ripetibile)"},
+            {"label": "50MCG/H - 5 Cerotti", "aic": "027092058", "unita": "Conf.", "dos_str": "5CEROTTI/50MCG", "rip": "(Non ripetibile)"}
+        ]
+    },
+    "MS CONTIN": {
+        "nome": "MS CONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Morfina Solfato", "layout": "short",
+        "varianti": [
+            {"label": "10MG - 28 Compresse RP", "aic": "026938015", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
+            {"label": "30MG - 28 Compresse RP", "aic": "026938039", "unita": "Conf.", "dos_str": "28CPR/30MG", "rip": "(Non ripetibile)"},
+            {"label": "60MG - 28 Compresse RP", "aic": "026938054", "unita": "Conf.", "dos_str": "28CPR/600MG", "rip": "(Non ripetibile)"}
+        ]
+    },
+    "PALEXIA": {
+        "nome": "PALEXIA", "categoria": "oppioidi", "prezzo": 50, "principio": "Tapentadolo", "layout": "short",
+        "varianti": [
+            {"label": "50MG - 30 Compresse RP", "aic": "040312019", "unita": "Conf.", "dos_str": "30CPR/50MG", "rip": "(Non ripetibile)"},
+            {"label": "100MG - 30 Compresse RP", "aic": "040312072", "unita": "Conf.", "dos_str": "30CPR/100MG", "rip": "(Non ripetibile)"}
+        ]
+    },
+
+    # --- BENZODIAZEPINE E SEDATIVI ---
     "RIVOTRIL": {
         "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": 30, "principio": "Clonazepam", "layout": "short",
         "varianti": [
@@ -214,6 +248,65 @@ FARMACI_DB = {
             {"label": "5MG/ML - Gocce 10ML", "aic": "019973048", "unita": "Flac.", "dos_str": "5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
+    "EN": {
+        "nome": "EN", "categoria": "benzo", "prezzo": 30, "principio": "Delorazepam", "layout": "short",
+        "varianti": [
+            {"label": "1MG - 20 Compresse", "aic": "024222018", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
+            {"label": "2MG - 20 Compresse", "aic": "024222020", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
+            {"label": "2MG/ML - Gocce 20ML", "aic": "024222044", "unita": "Flac.", "dos_str": "2MG/ML", "rip": "(Ripetibile)"}
+        ]
+    },
+    "HALCION": {
+        "nome": "HALCION", "categoria": "benzo", "prezzo": 30, "principio": "Triazolam", "layout": "short",
+        "varianti": [
+            {"label": "0.125MG - 20 Compresse", "aic": "023961019", "unita": "Conf.", "dos_str": "20CPR/0.125MG", "rip": "(Ripetibile)"},
+            {"label": "0.25MG - 20 Compresse", "aic": "023961021", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"}
+        ]
+    },
+
+    # --- Z-DRUGS, NEUROMODULATORI E SEDATIVI SPECIALI ---
+    "STILNOX": {
+        "nome": "STILNOX", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
+        "varianti": [
+            {"label": "10MG - 20 Compresse", "aic": "027872013", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)"}
+        ]
+    },
+    "ZOLPIDEM": {
+        "nome": "ZOLPIDEM", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
+        "varianti": [
+            {"label": "10MG - 20 Compresse", "aic": "035123015", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)"}
+        ]
+    },
+    "IMOVANE": {
+        "nome": "IMOVANE", "categoria": "benzo", "prezzo": 30, "principio": "Zopiclone", "layout": "short",
+        "varianti": [
+            {"label": "7.5MG - 20 Compresse", "aic": "026842017", "unita": "Conf.", "dos_str": "20CPR/7.5MG", "rip": "(Ripetibile)"}
+        ]
+    },
+    "LYRICA": {
+        "nome": "LYRICA", "categoria": "altro", "prezzo": 30, "principio": "Pregabalin", "layout": "short",
+        "varianti": [
+            {"label": "75MG - 56 Capsule", "aic": "036774052", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
+            {"label": "150MG - 56 Capsule", "aic": "036774138", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"},
+            {"label": "300MG - 56 Capsule", "aic": "036774215", "unita": "Conf.", "dos_str": "56CAPS/300MG", "rip": "(Ripetibile)"}
+        ]
+    },
+    "PREGABALIN": {
+        "nome": "PREGABALIN", "categoria": "altro", "prezzo": 30, "principio": "Pregabalin", "layout": "short",
+        "varianti": [
+            {"label": "75MG - 56 Capsule", "aic": "042111023", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
+            {"label": "150MG - 56 Capsule", "aic": "042111086", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"}
+        ]
+    },
+    "NEURONTIN": {
+        "nome": "NEURONTIN", "categoria": "altro", "prezzo": 30, "principio": "Gabapentin", "layout": "short",
+        "varianti": [
+            {"label": "300MG - 50 Capsule", "aic": "028211029", "unita": "Conf.", "dos_str": "50CAPS/300MG", "rip": "(Ripetibile)"},
+            {"label": "400MG - 50 Capsule", "aic": "028211043", "unita": "Conf.", "dos_str": "50CAPS/400MG", "rip": "(Ripetibile)"}
+        ]
+    },
+
+    # --- FANS E ANTINFIAMMATORI COMUNI ---
     "OKI": {
         "nome": "OKI", "categoria": "altro", "prezzo": None, "principio": "Ketoprofene", "layout": "short",
         "varianti": [
@@ -663,7 +756,7 @@ async def cmd_start(message: Message, state: FSMContext):
         testo = (
             "🔒 **Sistema Riservato**\n\n"
             "**Tariffario Emissione Singola:**\n"
-            "• 💊 Benzodiazepine: **30€** (BTC)\n"
+            "• 💊 Benzodiazepine / Sedativi: **30€** (BTC)\n"
             "• 💉 Oppioidi: **50€** (BTC)\n"
             "• 📋 Altri farmaci: Su richiesta al proprietario\n\n"
             "_Nota: Il comando /start serve solo al primo avvio. Dopodiché potrai usare direttamente i bottoni rapidi qui sotto!_"
@@ -725,8 +818,8 @@ async def ricevi_citta(message: Message, state: FSMContext):
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax"), KeyboardButton(text="Tavor")],
-            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Paracodina")],
-            [KeyboardButton(text="Tachidol"), KeyboardButton(text="Oki"), KeyboardButton(text="Toradol")]
+            [KeyboardButton(text="Stilnox"), KeyboardButton(text="Lyrica"), KeyboardButton(text="Valium")],
+            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Durogesic")]
         ],
         resize_keyboard=True
     )
@@ -763,7 +856,6 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
             parse_mode="Markdown"
         )
     else:
-        # Se scrivi qualsiasi altro farmaco, genera una variante dinamica pulita senza blocchi
         nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
         varianti_custom = [
             {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
