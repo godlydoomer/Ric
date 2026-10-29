@@ -18,7 +18,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
-# Legge il token dalla variabile d'ambiente su Render
 bottoken = os.getenv("bottoken")
 
 bot = Bot(token=bottoken)
@@ -28,7 +27,6 @@ fake = Faker('it_IT')
 OUTPUT_DIR = "output_files"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Configurazione Accessi e Monetizzazione
 BTC_WALLET = "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy"
 SECRET_PASS = "laziomerda"
 VIP_FILE = "vip_users.json"
@@ -53,9 +51,6 @@ def salva_vip(user_id: int):
 
 VIP_USERS = carica_vip()
 
-# ==============================================================================
-# 1. DATABASE INTERNO
-# ==============================================================================
 CITTA_DB = {
     "cerignola": {
         "nome": "Cerignola", "cap": "71042", "prov": "FG", "catastale": "C514",
@@ -228,9 +223,6 @@ FARMACI_DB = {
     }
 }
 
-# ==============================================================================
-# 2. PARSER & NORMALIZZAZIONE
-# ==============================================================================
 LEET_MAP = str.maketrans({
     '4': 'A', '0': 'O', '1': 'I', '3': 'E', '5': 'S', '7': 'T', '8': 'B', '6': 'G', '9': 'G', '2': 'Z'
 })
@@ -264,7 +256,7 @@ def de_leet_parola(parola: str) -> str:
     return pulita.upper().translate(LEET_MAP)
 
 def separa_nome_attaccato(parola_unica: str) -> str:
-    camel_split = re.sub(r'([a-z0-9])([A-Z])', r' ', parola_unica)
+    camel_split = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', parola_unica)
     if " " in camel_split:
         parti = [de_leet_parola(p) for p in camel_split.split()]
         return " ".join(parti)
@@ -430,9 +422,6 @@ def trova_farmaco_smart(input_utente: str):
         return matches[0]
     return None
 
-# ==============================================================================
-# 3. ELABORAZIONE DATI ANAGRAFICI E MEDICI
-# ==============================================================================
 MESI_CF = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'H', 7: 'L', 8: 'M', 9: 'P', 10: 'R', 11: 'S', 12: 'T'}
 ODD_MAP = {
     '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
@@ -530,9 +519,6 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
             "tel_medico": f"338{random.randint(100000, 999999)}"
         }
 
-# ==============================================================================
-# 4. GENERAZIONE BARCODE & DOCUMENTI PDF
-# ==============================================================================
 def genera_barcode_pulito(valore: str, nome_file_output: str) -> str:
     valore_pulito = "".join(c for c in valore.upper() if c.isalnum() or c in " -.")
     if not valore_pulito:
@@ -552,7 +538,6 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
-    # --- Intestazione ---
     pdf.set_xy(13.0, 36.0)
     pdf.set_font("Times", "B", 11.5)
     pdf.cell(0, 5.2, dati["nome_medico"], ln=True)
@@ -571,7 +556,6 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_x(13.0)
     pdf.cell(0, 5.2, f"Tel. {dati['tel_medico']}", ln=True)
 
-    # --- Assistito ---
     pdf.set_xy(13.0, 99.5)
     pdf.set_font("Times", "B", 12)
     pdf.cell(0, 6, "Assistito", ln=True)
@@ -580,13 +564,11 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_font("Times", "", 12)
     pdf.cell(0, 6, dati["nome_assistito"], ln=True)
 
-    # --- Codice Fiscale ---
     pdf.set_xy(13.0, 137.0)
     pdf.set_font("Times", "", 12)
     pdf.cell(0, 6, "Codice Fiscale:", ln=True)
     pdf.image(bc_cf_path, x=21.5, y=143.0, w=66.0, h=14.5)
 
-    # --- Prescrizione ---
     pdf.set_xy(13.0, 180.5)
     pdf.set_font("Times", "B", 12)
     pdf.cell(0, 6, "Prescrizione:", ln=True)
@@ -608,7 +590,6 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
         pdf.set_xy(89.0, 220.0)
         pdf.cell(0, 6.2, dati["farmaco_riga3"], ln=True)
 
-    # --- Data e Firma ---
     pdf.set_font("Times", "", 12)
     pdf.set_xy(11.0, 236.5)
     pdf.cell(80, 6, dati["luogo_data"], ln=0)
@@ -618,9 +599,6 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
 
     pdf.output(pdf_path)
 
-# ==============================================================================
-# 5. GESTIONE STATI E FLUSSO BOT
-# ==============================================================================
 class FormPrescrizione(StatesGroup):
     paziente = State()
     citta = State()
@@ -637,12 +615,11 @@ async def sblocco_lifetime(message: Message, state: FSMContext):
     salva_vip(uid)
     await state.clear()
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
+        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
         resize_keyboard=True
     )
     await message.answer(
-        "ð **Accesso Lifetime Attivato.**\n"
-        "Paywall disattivato per il tuo account.",
+        "🔓 **Accesso Lifetime Attivato.**\nPaywall disattivato per il tuo account.",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -654,38 +631,43 @@ async def cmd_start(message: Message, state: FSMContext):
     is_vip = uid in VIP_USERS
 
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
+        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
         resize_keyboard=True
     )
     if is_vip:
-        testo = "â¡ **Sistema Attivo (Licenza Lifetime)**\nPremi il pulsante in basso per procedere."
+        testo = "⚡ **Sistema Attivo (Licenza Lifetime)**\n\nPremi il pulsante in basso per procedere o usa i bottoni."
     else:
         testo = (
-            "ð **Sistema Riservato**\n\n"
+            "🔒 **Sistema Riservato**\n\n"
             "**Tariffario Emissione Singola:**\n"
-            "â¢ Benzodiazepine: **30â¬** (BTC)\n"
-            "â¢ Oppioidi: **50â¬** (BTC)\n"
-            "â¢ Altri farmaci: **Su richiesta al proprietario**\n\n"
-            "Premi il pulsante qui sotto per configurare la richiesta."
+            "• 💊 Benzodiazepine: **30€** (BTC)\n"
+            "• 💉 Oppioidi: **50€** (BTC)\n"
+            "• 📋 Altri farmaci: Su richiesta al proprietario\n\n"
+            "_Nota: Il comando /start serve solo al primo avvio. Dopodiché potrai usare direttamente i bottoni rapidi qui sotto!_"
         )
     await message.answer(testo, reply_markup=kb, parse_mode="Markdown")
 
-@dp.message(F.text == "ð Nuova Pratica")
+@dp.message(F.text == "📄 Nuova Pratica")
 async def step_paziente(message: Message, state: FSMContext):
     await state.set_state(FormPrescrizione.paziente)
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="â Annulla")]],
+        keyboard=[[KeyboardButton(text="❌ Annulla")]],
         resize_keyboard=True
     )
     await message.answer(
-        "1ï¸â£ **Inserisci Nome, Cognome, Comune e Data di nascita:**",
+        "👤 **Inserisci Nome, Cognome, Comune e Data di nascita:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
 
-@dp.message(F.text == "â Annulla")
+@dp.message(F.text == "❌ Annulla")
 async def annulla_operazione(message: Message, state: FSMContext):
-    await cmd_start(message, state)
+    await state.clear()
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+        resize_keyboard=True
+    )
+    await message.answer("Operazione annullata. Premi il bottone per una nuova pratica:", reply_markup=kb)
 
 @dp.message(FormPrescrizione.paziente)
 async def ricevi_paziente(message: Message, state: FSMContext):
@@ -706,7 +688,7 @@ async def ricevi_paziente(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "2ï¸â£ **Indica la cittÃ  di emissione:**",
+        "🏥 **Indica la città di emissione:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -726,7 +708,7 @@ async def ricevi_citta(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "3ï¸â£ **Indica il prodotto richiesto:**",
+        "💊 **Indica il prodotto richiesto:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -745,13 +727,11 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         if not is_vip and categoria == "altro":
             await state.clear()
             kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
+                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
                 resize_keyboard=True
             )
             await message.answer(
-                "â **Prodotto su Richiesta**\n\n"
-                "Per questa tipologia l'emissione automatica Ã¨ disabilitata.\n"
-                "Contatta direttamente il proprietario per l'abilitazione.",
+                "⛔ **Prodotto su Richiesta**\n\nPer questa tipologia l'emissione automatica è disabilitata.",
                 reply_markup=kb,
                 parse_mode="Markdown"
             )
@@ -770,7 +750,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
         await message.answer(
-            "4ï¸â£ **Seleziona il formato:**",
+            "📋 **Seleziona il formato:**",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -778,12 +758,11 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         if not is_vip:
             await state.clear()
             kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
+                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
                 resize_keyboard=True
             )
             await message.answer(
-                "â **Prodotto Non Abilitato in Automatico**\n\n"
-                "Per questo elemento Ã¨ necessario contattare direttamente il proprietario.",
+                "⛔ **Prodotto Non Abilitato in Automatico**",
                 reply_markup=kb,
                 parse_mode="Markdown"
             )
@@ -806,7 +785,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         botones = [[KeyboardButton(text=v["label"])] for v in varianti_custom]
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
-        await message.answer("4ï¸â£ **Seleziona il formato:**", reply_markup=kb, parse_mode="Markdown")
+        await message.answer("📋 **Seleziona il formato:**", reply_markup=kb, parse_mode="Markdown")
 
 @dp.message(FormPrescrizione.scelta_dosaggio)
 async def ricevi_dosaggio(message: Message, state: FSMContext):
@@ -828,7 +807,7 @@ async def ricevi_dosaggio(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "5ï¸â£ **Indica la quantitÃ :**",
+        "🔢 **Indica la quantità:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -883,7 +862,7 @@ async def ricevi_quantita(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "6ï¸â£ **Conferma o inserisci la data:**",
+        "📅 **Conferma o inserisci la data:**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -919,12 +898,12 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
         crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
 
         kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="ð Nuova Pratica")]],
+            keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
             resize_keyboard=True
         )
         await message.answer_document(
             FSInputFile(pdf_path),
-            caption="â **Documento Emesso.**",
+            caption="✅ **Documento Emesso.**",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -936,18 +915,18 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
     await state.set_state(FormPrescrizione.attesa_pagamento)
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="ð Verifica Transazione BTC")],
-            [KeyboardButton(text="â Annulla")]
+            [KeyboardButton(text="🔄 Verifica Transazione BTC")],
+            [KeyboardButton(text="❌ Annulla")]
         ],
         resize_keyboard=True
     )
     await message.answer(
-        f"ð **PAGAMENTO RICHIESTO PER IL RILASCIO**\n\n"
-        f"â¢ **Categoria:** {cat_label}\n"
-        f"â¢ **Importo dovuto:** `{prezzo}â¬` in Bitcoin (BTC)\n\n"
-        f"Invia esattamente **{prezzo}â¬** in BTC al seguente indirizzo:\n"
+        f"🔒 **PAGAMENTO RICHIESTO PER IL RILASCIO**\n\n"
+        f"• **Categoria:** {cat_label}\n"
+        f"• **Importo dovuto:** 💶 `{prezzo}€` in Bitcoin (BTC)\n\n"
+        f"Invia esattamente **{prezzo}€** in BTC al seguente indirizzo:\n"
         f"`{BTC_WALLET}`\n\n"
-        f"_Dopo aver inviato la transazione sulla rete Bitcoin, incolla qui il **TXID** (Hash della transazione) oppure premi il pulsante di verifica._",
+        f"_Dopo aver inviato la transazione, incolla qui il TXID o premi il pulsante di verifica._",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -955,13 +934,12 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
 @dp.message(FormPrescrizione.attesa_pagamento)
 async def verifica_pagamento_finto(message: Message, state: FSMContext):
     await message.answer(
-        "â³ **Transazione non rilevata sulla Blockchain.**\n\n"
-        f"Assicurati di aver inviato l'importo esatto al wallet:\n`{BTC_WALLET}`\n\n"
-        "Attendere almeno 1 conferma di rete o contattare il proprietario fornendo il TXID.",
+        "⏳ **Transazione non rilevata sulla Blockchain.**\n\n"
+        f"Assicurati di aver inviato l'importo esatto al wallet:\n`{BTC_WALLET}`",
+        reply_markup=kb if 'kb' in locals() else None,
         parse_mode="Markdown"
     )
 
-# --- SERVER WEB PER RENDER ---
 async def handle(request):
     return web.Response(text="Service operational.")
 
