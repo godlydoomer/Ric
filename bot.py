@@ -16,7 +16,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 TOKEN = "9294177492:AAHB37c-tHDGMRN_Ze0ABKls6M2VYHIBSI4"
 
-
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 fake = Faker('it_IT')
@@ -108,7 +107,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
 async def handle(request):
     return web.Response(text="Bot is running!")
 
-async def web_server():
+async def main():
     app = web.Application()
     app.router.add_get("/", handle)
     runner = web.AppRunner(app)
@@ -116,9 +115,8 @@ async def web_server():
     port = int(os.environ.get("PORT", 10000))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-
-async def main():
-    await web_server()
+    
+    # Avvia il polling di telegram in contemporanea al server web
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
