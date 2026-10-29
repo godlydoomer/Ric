@@ -1,9 +1,7 @@
 import os
 import re
-import json
 import random
 import difflib
-import asyncio
 from datetime import datetime
 from aiohttp import web
 import barcode
@@ -28,33 +26,8 @@ fake = Faker('it_IT')
 OUTPUT_DIR = "output_files"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Configurazione Paywall & Sicurezza
-BTC_WALLET = "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy"
-SECRET_PASS = "laziomerda"
-VIP_FILE = "vip_users.json"
-
-def carica_vip() -> set:
-    if os.path.exists(VIP_FILE):
-        try:
-            with open(VIP_FILE, "r") as f:
-                return set(json.load(f))
-        except Exception:
-            return set()
-    return set()
-
-def salva_vip(user_id: int):
-    vips = carica_vip()
-    vips.add(user_id)
-    try:
-        with open(VIP_FILE, "w") as f:
-            json.dump(list(vips), f)
-    except Exception:
-        pass
-
-VIP_USERS = carica_vip()
-
 # ==============================================================================
-# 1. DATABASE INTERNO (NASCOSTO ALL'UTENTE)
+# 1. DATABASE GEOGRAFICO & MEDICI REALI (CAP, PROVINCIA, CATASTALE, MEDICI)
 # ==============================================================================
 CITTA_DB = {
     "cerignola": {
@@ -139,141 +112,122 @@ CATASTALI_EXTRA = {
     "barletta": "A669", "andria": "A285", "trani": "L328", "manfredonia": "E885"
 }
 
-FARMACI_DB = {
+# ==============================================================================
+# 2. BANCA DATI FARMACI AIFA (PRINCIPIO ATTIVO, FORMATI, AIC, RIPETIBILITÀ)
+# ==============================================================================
+AIFA_DB = {
     "DEPALGOS": {
         "nome": "DEPALGOS",
-        "categoria": "oppioidi",
-        "prezzo": 50,
         "principio": "Ossicodone+Paracetamolo",
         "layout": "long",
         "varianti": [
-            {"label": "5MG/325MG - 28 Compresse", "aic": "037310014", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TARGIN": {
-        "nome": "TARGIN",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Ossicodone+Naloxone",
-        "layout": "long",
-        "varianti": [
-            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "CONTRAMAL": {
-        "nome": "CONTRAMAL",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Tramadolo",
-        "layout": "short",
-        "varianti": [
-            {"label": "50MG - 20 Capsule", "aic": "028853013", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG - 20 Compresse SR", "aic": "028853076", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG/ML - Gocce 10ML", "aic": "028853049", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TACHIDOL": {
-        "nome": "TACHIDOL",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Paracetamolo+Codeina",
-        "layout": "long",
-        "varianti": [
-            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
-            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG/325MG - 28 Compresse", "aic": "037310014", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)", "nota": "Stupefacenti Sez. A (RMR/Ricetta Rossa SSN o Bianca RNR)"},
+            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)", "nota": "Stupefacenti Sez. A (RMR/Ricetta Rossa SSN o Bianca RNR)"},
+            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)", "nota": "Stupefacenti Sez. A (RMR/Ricetta Rossa SSN o Bianca RNR)"}
         ]
     },
     "RIVOTRIL": {
         "nome": "RIVOTRIL",
-        "categoria": "benzo",
-        "prezzo": 30,
         "principio": "Clonazepam",
         "layout": "short",
         "varianti": [
-            {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
-            {"label": "0.5MG - 20 Compresse", "aic": "023159056", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG/ML - Gocce 10ML", "aic": "023159031", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile (max 3 volte in 30gg)"},
+            {"label": "0.5MG - 20 Compresse", "aic": "023159056", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile (max 3 volte in 30gg)"},
+            {"label": "2.5MG/ML - Gocce 10ML", "aic": "023159031", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Gocce Orali Flacone 10ML"}
         ]
     },
     "XANAX": {
         "nome": "XANAX",
-        "categoria": "benzo",
-        "prezzo": 30,
         "principio": "Alprazolam",
         "layout": "short",
         "varianti": [
-            {"label": "0.25MG - 20 Compresse", "aic": "025980010", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"},
-            {"label": "0.50MG - 20 Compresse", "aic": "025980022", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)"},
-            {"label": "1MG - 20 Compresse", "aic": "025980034", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "0.75MG/ML - Gocce 20ML", "aic": "025980059", "unita": "Flac.", "dos_str": "0.75MG/ML", "rip": "(Ripetibile)"}
+            {"label": "0.25MG - 20 Compresse", "aic": "025980010", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile"},
+            {"label": "0.50MG - 20 Compresse", "aic": "025980022", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile"},
+            {"label": "1MG - 20 Compresse", "aic": "025980034", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile"},
+            {"label": "0.75MG/ML - Gocce 20ML", "aic": "025980059", "unita": "Flac.", "dos_str": "0.75MG/ML", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Gocce Orali Flacone 20ML"}
         ]
     },
-    "LEXOTAN": {
-        "nome": "LEXOTAN",
-        "categoria": "benzo",
-        "prezzo": 30,
-        "principio": "Bromazepam",
+    "CONTRAMAL": {
+        "nome": "CONTRAMAL",
+        "principio": "Tramadolo",
         "layout": "short",
         "varianti": [
-            {"label": "1.5MG - 20 Compresse", "aic": "022905012", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)"},
-            {"label": "3MG - 20 Compresse", "aic": "022905024", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG/ML - Gocce 20ML", "aic": "022905051", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "50MG - 20 Capsule", "aic": "028853013", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)", "nota": "Oppioidi Sez. D - Ricetta Non Ripetibile (RNR)"},
+            {"label": "100MG - 20 Compresse SR", "aic": "028853076", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)", "nota": "Oppioidi Sez. D - Ricetta Non Ripetibile (RNR)"},
+            {"label": "100MG/ML - Gocce 10ML", "aic": "028853049", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Non ripetibile)", "nota": "Oppioidi Sez. D - Gocce Orali (RNR)"}
         ]
     },
-    "OKI": {
-        "nome": "OKI",
-        "categoria": "altro",
-        "prezzo": None,
-        "principio": "Ketoprofene",
-        "layout": "short",
+    "TARGIN": {
+        "nome": "TARGIN",
+        "principio": "Ossicodone+Naloxone",
+        "layout": "long",
         "varianti": [
-            {"label": "80MG - 30 Bustine", "aic": "028511058", "unita": "Conf.", "dos_str": "30BUST/80MG", "rip": "(Non ripetibile)"},
-            {"label": "80MG/ML - Gocce 30ML", "aic": "028511072", "unita": "Flac.", "dos_str": "80MG/ML", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TORADOL": {
-        "nome": "TORADOL",
-        "categoria": "altro",
-        "prezzo": None,
-        "principio": "Ketorolac",
-        "layout": "short",
-        "varianti": [
-            {"label": "10MG - 10 Compresse", "aic": "027253019", "unita": "Conf.", "dos_str": "10CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/ML - Gocce 10ML", "aic": "027253045", "unita": "Flac.", "dos_str": "20MG/ML", "rip": "(Non ripetibile)"},
-            {"label": "30MG/ML - 3 Fiale Iniett.", "aic": "027253033", "unita": "Conf.", "dos_str": "3FIALE/30MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)", "nota": "Stupefacenti Sez. A (Ricetta Rossa/RMR o Bianca RNR)"},
+            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)", "nota": "Stupefacenti Sez. A (Ricetta Rossa/RMR o Bianca RNR)"},
+            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)", "nota": "Stupefacenti Sez. A (Ricetta Rossa/RMR o Bianca RNR)"}
         ]
     },
     "TACHIPIRINA": {
         "nome": "TACHIPIRINA",
-        "categoria": "altro",
-        "prezzo": None,
         "principio": "Paracetamolo",
         "layout": "short",
         "varianti": [
-            {"label": "1000MG - 16 Compresse", "aic": "012745096", "unita": "Conf.", "dos_str": "16CPR/1000MG", "rip": "(Ripetibile)"},
-            {"label": "500MG - 30 Compresse", "aic": "012745235", "unita": "Conf.", "dos_str": "30CPR/500MG", "rip": "(Ripetibile)"},
-            {"label": "100MG/ML - Gocce 30ML", "aic": "012745033", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Ripetibile)"}
+            {"label": "1000MG - 16 Compresse", "aic": "012745096", "unita": "Conf.", "dos_str": "16CPR/1000MG", "rip": "(Ripetibile)", "nota": "Dosaggio 1000mg soggetto a prescrizione medica Ripetibile"},
+            {"label": "500MG - 30 Compresse", "aic": "012745235", "unita": "Conf.", "dos_str": "30CPR/500MG", "rip": "(Ripetibile)", "nota": "SOP / Ripetibile"},
+            {"label": "100MG/ML - Gocce 30ML", "aic": "012745033", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Ripetibile)", "nota": "Gocce Orali Flacone 30ML"}
+        ]
+    },
+    "TACHIDOL": {
+        "nome": "TACHIDOL",
+        "principio": "Paracetamolo+Codeina",
+        "layout": "long",
+        "varianti": [
+            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)", "nota": "Oppioidi Sez. D - Ricetta Non Ripetibile (RNR)"},
+            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)", "nota": "Oppioidi Sez. D - Ricetta Non Ripetibile (RNR)"}
+        ]
+    },
+    "OKI": {
+        "nome": "OKI",
+        "principio": "Ketoprofene",
+        "layout": "short",
+        "varianti": [
+            {"label": "80MG - 30 Bustine", "aic": "028511058", "unita": "Conf.", "dos_str": "30BUST/80MG", "rip": "(Non ripetibile)", "nota": "FANS 80mg soggetto a Ricetta Non Ripetibile (RNR)"},
+            {"label": "80MG/ML - Gocce 30ML", "aic": "028511072", "unita": "Flac.", "dos_str": "80MG/ML", "rip": "(Non ripetibile)", "nota": "Gocce Orali 30ML - Ricetta Non Ripetibile (RNR)"}
         ]
     },
     "BRUFEN": {
         "nome": "BRUFEN",
-        "categoria": "altro",
-        "prezzo": None,
         "principio": "Ibuprofene",
         "layout": "short",
         "varianti": [
-            {"label": "600MG - 30 Compresse", "aic": "022593129", "unita": "Conf.", "dos_str": "30CPR/600MG", "rip": "(Ripetibile)"},
-            {"label": "800MG - 20 Compresse", "aic": "022593218", "unita": "Conf.", "dos_str": "20CPR/800MG", "rip": "(Ripetibile)"}
+            {"label": "600MG - 30 Compresse", "aic": "022593129", "unita": "Conf.", "dos_str": "30CPR/600MG", "rip": "(Ripetibile)", "nota": "Ricetta Ripetibile (RR)"},
+            {"label": "800MG - 20 Compresse", "aic": "022593218", "unita": "Conf.", "dos_str": "20CPR/800MG", "rip": "(Ripetibile)", "nota": "Ricetta Ripetibile (RR)"}
+        ]
+    },
+    "TORADOL": {
+        "nome": "TORADOL",
+        "principio": "Ketorolac",
+        "layout": "short",
+        "varianti": [
+            {"label": "10MG - 10 Compresse", "aic": "027253019", "unita": "Conf.", "dos_str": "10CPR/10MG", "rip": "(Non ripetibile)", "nota": "Ricetta Non Ripetibile (RNR)"},
+            {"label": "20MG/ML - Gocce 10ML", "aic": "027253045", "unita": "Flac.", "dos_str": "20MG/ML", "rip": "(Non ripetibile)", "nota": "Gocce Orali Flacone 10ML - RNR"},
+            {"label": "30MG/ML - 3 Fiale Iniett.", "aic": "027253033", "unita": "Conf.", "dos_str": "3FIALE/30MG", "rip": "(Non ripetibile)", "nota": "Soluzione Iniettabile - RNR"}
+        ]
+    },
+    "LEXOTAN": {
+        "nome": "LEXOTAN",
+        "principio": "Bromazepam",
+        "layout": "short",
+        "varianti": [
+            {"label": "1.5MG - 20 Compresse", "aic": "022905012", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile"},
+            {"label": "3MG - 20 Compresse", "aic": "022905024", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Ricetta Ripetibile"},
+            {"label": "2.5MG/ML - Gocce 20ML", "aic": "022905051", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)", "nota": "Benzodiazepine Sez. E - Gocce Orali 20ML"}
         ]
     }
 }
 
 # ==============================================================================
-# 2. SMART PARSER & CORRETTORE SILENZIOSO
+# 3. SMART PARSER & CORRETTORE AUTOMATICO INTELLIGENTE
 # ==============================================================================
 LEET_MAP = str.maketrans({
     '4': 'A', '0': 'O', '1': 'I', '3': 'E', '5': 'S', '7': 'T', '8': 'B', '6': 'G', '9': 'G', '2': 'Z'
@@ -287,9 +241,9 @@ NOMI_COMUNI = [
     "ROBERTO", "MASSIMO", "CLAUDIO", "FABIO", "GIORGIO", "ENRICO", "SERGIO", "MAURIZIO",
     "MARIA", "ANNA", "GIULIA", "FRANCESCA", "SARA", "LAURA", "CHIARA", "MARTINA", "ALESSIA",
     "VALENTINA", "FEDERICA", "ELISA", "ILARIA", "ELENA", "GIORGIA", "SILVIA", "PAOLA",
-    "ROBERTA", "DANIELA", "MONICA", "SONIA", "VERONICA", "BEATRICE", "SOFIA", "AURORA",
+    "ROBERTA", " DANIELA", "MONICA", "SONIA", "VERONICA", "BEATRICE", " SOFIA", "AURORA",
     "ALICE", "GRETA", "VITTORIA", "CAMILLA", "CATERINA", "LUCIA", "ANTONELLA", "TERESA",
-    "ROSA", "ANGELA", "GIOVANNA", "CARMELA", "RITA", "ERIKA", "CESARE"
+    "ROSA", "ANGELA", "GIOVANNA", "CARMELA", " RITA", "ERIKA", "CESARE"
 ]
 
 MESI_TESTUALI = {
@@ -300,6 +254,7 @@ MESI_TESTUALI = {
 }
 
 def de_leet_parola(parola: str) -> str:
+    """Converte numeri inseriti per errore dentro una parola (es. m4ri0 -> MARIO)."""
     pulita = re.sub(r'[^a-zA-Z0-9]', '', parola)
     if not pulita:
         return ""
@@ -308,19 +263,25 @@ def de_leet_parola(parola: str) -> str:
     return pulita.upper().translate(LEET_MAP)
 
 def separa_nome_attaccato(parola_unica: str) -> str:
+    """Se l'utente scrive 'mariorossi' o 'MarioRossi', lo divide in 'MARIO ROSSI'."""
+    # 1. Controlla se c'è un CamelCase (es. MarioRossi)
     camel_split = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', parola_unica)
     if " " in camel_split:
         parti = [de_leet_parola(p) for p in camel_split.split()]
         return " ".join(parti)
 
+    # 2. Controlla se inizia con un nome italiano comune (es. m4riorossi -> MARIO ROSSI)
     up = de_leet_parola(parola_unica)
     for n in sorted(NOMI_COMUNI, key=len, reverse=True):
         n_clean = n.strip()
         if up.startswith(n_clean) and len(up) > len(n_clean) + 2:
-            return f"{n_clean} {up[len(n_clean):]}"
+            resto = up[len(n_clean):]
+            return f"{n_clean} {resto}"
         if up.endswith(n_clean) and len(up) > len(n_clean) + 2:
-            return f"{up[:-len(n_clean)]} {n_clean}"
+            inizio = up[:-len(n_clean)]
+            return f"{inizio} {n_clean}"
 
+    # 3. Se è una stringa lunghissima senza spazi, spezza a metà
     if len(up) >= 10:
         meta = len(up) // 2
         return f"{up[:meta]} {up[meta:]}"
@@ -333,10 +294,19 @@ def normalizza_anno(aa_str: str) -> int:
     return aa
 
 def analizza_input_paziente_smart(testo_raw: str) -> dict:
+    """
+    Capisce qualsiasi formato:
+    - 'm4rio Rossi nato a milano il 2 05 07'
+    - 'mariorossi 12/05/1995 foggia'
+    - 'MARIO ROSSI | 12/05/1995 | Foggia | M'
+    """
     testo = testo_raw.strip()
+
+    # 1. Estrazione Data di Nascita (numeri tipo 2 05 07, 02/05/2007, 2-5-95 o '2 maggio 07')
     data_formattata = "15/04/1990"
     testo_senza_data = testo
 
+    # Cerca formato con mese testuale (es. 2 maggio 07)
     pattern_mese_txt = r'\b(\d{1,2})\s+(' + '|'.join(MESI_TESTUALI.keys()) + r')\s+(\d{2,4})\b'
     m_txt = re.search(pattern_mese_txt, testo, flags=re.IGNORECASE)
     if m_txt:
@@ -346,6 +316,7 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
         data_formattata = f"{gg:02d}/{mm:02d}/{aaaa}"
         testo_senza_data = testo[:m_txt.start()] + " " + testo[m_txt.end():]
     else:
+        # Cerca formato numerico (es. 2 05 07, 02/05/2007, 2.5.1995, o 02052007)
         pattern_num = r'\b(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})\b'
         m_num = re.search(pattern_num, testo)
         if m_num:
@@ -355,6 +326,7 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
             data_formattata = f"{gg:02d}/{mm:02d}/{aaaa}"
             testo_senza_data = testo[:m_num.start()] + " " + testo[m_num.end():]
         else:
+            # Caso data scritta tutta attaccata (es. 02052007 o 020507)
             m_att = re.search(r'\b(\d{2})(\d{2})(\d{2,4})\b', testo)
             if m_att:
                 gg = max(1, min(31, int(m_att.group(1))))
@@ -363,26 +335,32 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
                 data_formattata = f"{gg:02d}/{mm:02d}/{aaaa}"
                 testo_senza_data = testo[:m_att.start()] + " " + testo[m_att.end():]
 
+    # 2. Estrazione Sesso esplicito (se presente come M/F isolato o "maschio"/"femmina")
     sesso = None
     m_sesso = re.search(r'\b(maschio|uomo|femmina|donna|m|f)\b', testo_senza_data, flags=re.IGNORECASE)
     if m_sesso:
         val_s = m_sesso.group(1).upper()
         if val_s in ["F", "FEMMINA", "DONNA"]:
             sesso = "F"
-            testo_senza_data = testo_senza_data[:m_sesso.start()] + " " + testo_senza_data[m_sesso.end():]
         elif val_s in ["M", "MASCHIO", "UOMO"]:
+            # Evita di confondere una iniziale puntata con il sesso se non è alla fine
             if len(val_s) > 1 or m_sesso.start() > len(testo_senza_data) - 4:
                 sesso = "M"
                 testo_senza_data = testo_senza_data[:m_sesso.start()] + " " + testo_senza_data[m_sesso.end():]
+        if sesso == "F":
+            testo_senza_data = testo_senza_data[:m_sesso.start()] + " " + testo_senza_data[m_sesso.end():]
 
+    # 3. Estrazione Luogo di Nascita
     luogo_trovato = None
     tutte_localita = list(CITTA_DB.keys()) + list(CATASTALI_EXTRA.keys())
 
+    # Prima controlla se c'è scritto "nato a <città>" o "nata a <città>"
     m_nato = re.search(r'\bnat[oa]?\s+(?:a|in)\s+([a-zA-Z0-9\s]{3,20})', testo_senza_data, flags=re.IGNORECASE)
     if m_nato:
         if "nata" in m_nato.group(0).lower() and not sesso:
             sesso = "F"
         cand_luogo = m_nato.group(1).strip()
+        # Prende la prima parola o due (es. San Severo / Francavilla Fontana / Milano)
         parole_cand = cand_luogo.split()
         for num_p in [2, 1]:
             if len(parole_cand) >= num_p:
@@ -394,15 +372,18 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
         if not luogo_trovato and parole_cand:
             luogo_trovato = de_leet_parola(parole_cand[0]).lower()
 
+    # Rimuove "nato a ...", "il", "|", virgole e preposizioni
     testo_pulito = re.sub(r'\b(nato|nata|nat|il|del|a|in|da|di)\b', ' ', testo_senza_data, flags=re.IGNORECASE)
     testo_pulito = re.sub(r'[|,\-/]', ' ', testo_pulito)
 
     tokens_raw = [t for t in testo_pulito.split() if t.strip()]
     tokens_deleet = [de_leet_parola(t) for t in tokens_raw if de_leet_parola(t)]
 
+    # Se non avevamo ancora trovato il luogo con "nato a", cerca tra le parole una città nota
     tokens_nome = []
     idx = 0
     while idx < len(tokens_deleet):
+        # Prova match a 2 parole (es. SAN SEVERO)
         if idx + 1 < len(tokens_deleet):
             due_p = f"{tokens_deleet[idx]} {tokens_deleet[idx+1]}".lower()
             match_2 = difflib.get_close_matches(due_p, tutte_localita, n=1, cutoff=0.8)
@@ -422,12 +403,15 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
     if not luogo_trovato:
         luogo_trovato = "milano"
 
+    # 4. Ricostruzione e Correzione Nome e Cognome
     if not tokens_nome:
         nome_finale = "MARIO ROSSI"
     elif len(tokens_nome) == 1:
+        # Era scritto tutto attaccato (es. "mariorossi")
         nome_finale = separa_nome_attaccato(tokens_nome[0])
     else:
         parti_corr = [de_leet_parola(t) for t in tokens_nome if de_leet_parola(t)]
+        # Filtra eventuali numeri rimasti isolati
         parti_corr = [p for p in parti_corr if not p.isdigit()]
         if len(parti_corr) == 1:
             nome_finale = separa_nome_attaccato(parti_corr[0])
@@ -436,6 +420,7 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
         else:
             nome_finale = "MARIO ROSSI"
 
+    # 5. Deduzione automatica del sesso dal nome di battesimo se non specificato
     if not sesso:
         primo_nome = nome_finale.split()[0].upper()
         if primo_nome.endswith("A") and primo_nome not in ["LUCA", "ANDREA", "NICOLA", "MATTIA", "ELIA", "TOBIA"]:
@@ -447,14 +432,18 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
 
     return {
         "nome_assistito": nome_finale,
+        "data_nascita": data_formattata,
         "luogo_nascita": luogo_trovato.title(),
+        "sesso": sesso,
         "cf_assistito": cf_calcolato
     }
 
 def trova_citta_smart(input_utente: str) -> str:
+    """Corregge errori di battitura o nomi attaccati per le città (es. 'sansevero' o 'm1lano')."""
     pulito = " ".join(de_leet_parola(w) for w in input_utente.split()).lower()
     if not pulito:
         return "milano"
+    # Controllo diretto o senza spazi (es. sansevero -> san severo)
     for k in CITTA_DB:
         if pulito == k or pulito == k.replace(" ", ""):
             return k
@@ -464,18 +453,19 @@ def trova_citta_smart(input_utente: str) -> str:
     return pulito
 
 def trova_farmaco_smart(input_utente: str):
+    """Corregge errori di battitura sul nome del farmaco (es. 'dep4lgos', 'rivotr1l')."""
     primo_token = input_utente.strip().split()[0] if input_utente.strip() else ""
     pulito = de_leet_parola(primo_token)
-    for k in FARMACI_DB:
+    for k in AIFA_DB:
         if k in pulito or pulito in k:
             return k
-    matches = difflib.get_close_matches(pulito, list(FARMACI_DB.keys()), n=1, cutoff=0.6)
+    matches = difflib.get_close_matches(pulito, list(AIFA_DB.keys()), n=1, cutoff=0.6)
     if matches:
         return matches[0]
     return None
 
 # ==============================================================================
-# 3. CALCOLO CF & MEDICI (SILENZIOSO)
+# 4. ALGORITMO UFFICIALE CALCOLO CODICE FISCALE ITALIANO
 # ==============================================================================
 MESI_CF = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'H', 7: 'L', 8: 'M', 9: 'P', 10: 'R', 11: 'S', 12: 'T'}
 ODD_MAP = {
@@ -508,7 +498,7 @@ def trova_codice_catastale(luogo: str) -> str:
     if m:
         k = m[0]
         return CITTA_DB[k]["catastale"] if k in CITTA_DB else CATASTALI_EXTRA[k]
-    return "F205"
+    return "F205" # Default Milano se sconosciuto
 
 def calcola_cf_reale(nome_completo: str, data_nascita: str, sesso: str, luogo_nascita: str) -> str:
     try:
@@ -575,7 +565,7 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
         }
 
 # ==============================================================================
-# 4. GENERAZIONE BARCODE & PDF IDENTICO ALLA REFERENCE
+# 5. GENERAZIONE BARCODE & PDF IDENTICO ALLA REFERENCE
 # ==============================================================================
 def genera_barcode_pulito(valore: str, nome_file_output: str) -> str:
     valore_pulito = "".join(c for c in valore.upper() if c.isalnum() or c in " -.")
@@ -615,7 +605,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_x(13.0)
     pdf.cell(0, 5.2, f"Tel. {dati['tel_medico']}", ln=True)
 
-    # --- 2. ASSISTITO ---
+    # --- 2. ASSISTITO (Solo Nome e Cognome puliti come nella reference) ---
     pdf.set_xy(13.0, 99.5)
     pdf.set_font("Times", "B", 12)
     pdf.cell(0, 6, "Assistito", ln=True)
@@ -665,7 +655,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.output(pdf_path)
 
 # ==============================================================================
-# 5. STATI, BACKDOOR E PAYWALL BTC
+# 6. STATI E HANDLER DEL BOT TELEGRAM
 # ==============================================================================
 class FormPrescrizione(StatesGroup):
     paziente = State()
@@ -674,64 +664,42 @@ class FormPrescrizione(StatesGroup):
     scelta_dosaggio = State()
     quantita = State()
     luogo_data = State()
-    attesa_pagamento = State()
-
-@dp.message(F.text.func(lambda t: t and t.strip().lower() == SECRET_PASS))
-async def sblocco_lifetime(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    VIP_USERS.add(uid)
-    salva_vip(uid)
-    await state.clear()
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-        resize_keyboard=True
-    )
-    await message.answer(
-        "🔓 **Accesso Lifetime Attivato.**\n"
-        "Paywall disattivato per il tuo account.",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
-    uid = message.from_user.id
-    is_vip = uid in VIP_USERS
-
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-        resize_keyboard=True
-    )
-    if is_vip:
-        testo = "⚡ **Sistema Attivo (Licenza Lifetime)**\nPremi il pulsante in basso per procedere."
-    else:
-        testo = (
-            "🔒 **Sistema Riservato**\n\n"
-            "**Tariffario Emissione Singola:**\n"
-            "• Benzodiazepine: **30€** (BTC)\n"
-            "• Oppioidi: **50€** (BTC)\n"
-            "• Altri farmaci: **Su richiesta al proprietario**\n\n"
-            "Premi il pulsante qui sotto per configurare la richiesta."
-        )
-    await message.answer(testo, reply_markup=kb, parse_mode="Markdown")
-
-@dp.message(F.text == "📄 Nuova Pratica")
-async def step_paziente(message: Message, state: FSMContext):
-    await state.set_state(FormPrescrizione.paziente)
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="❌ Annulla")]],
+        keyboard=[[KeyboardButton(text="📄 Nuova Ricetta Medica")]],
         resize_keyboard=True
     )
     await message.answer(
-        "1️⃣ **Inserisci Nome, Cognome, Comune e Data di nascita:**",
+        "🤖 **Bot Ricette AIFA + Smart Parser Attivo!**\n\n"
+        "• **Correzione automatica errori:** puoi scrivere i dati come vuoi (anche attaccati o con numeri in mezzo alle lettere)\n"
+        "• **Calcolo reale del Codice Fiscale**\n"
+        "• **Allineamento automatico Città, CAP e Provincia**\n"
+        "• **Dosaggi ufficiali AIFA**\n\n"
+        "Clicca il pulsante qui sotto per iniziare:",
         reply_markup=kb,
         parse_mode="Markdown"
     )
 
-@dp.message(F.text == "❌ Annulla")
-async def annulla_operazione(message: Message, state: FSMContext):
-    await cmd_start(message, state)
+@dp.message(F.text == "📄 Nuova Ricetta Medica")
+async def step_paziente(message: Message, state: FSMContext):
+    await state.set_state(FormPrescrizione.paziente)
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="OCULISTI CESARE nato a San Severo il 15 04 80")]],
+        resize_keyboard=True
+    )
+    await message.answer(
+        "1️⃣ **DATI ASSISTITO (Scrittura Libera Intelligente)**\n\n"
+        "Scrivi Nome, Cognome, luogo e data di nascita come preferisci, anche senza `|` o con errori di battitura.\n\n"
+        "_Esempi tutti validi:_\n"
+        "• `m4rio Rossi nato a milano il 2 05 07`\n"
+        "• `mariorossi 12/05/1995 foggia`\n"
+        "• `OCULISTI CESARE | 15/04/1980 | San Severo | M`",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
 
 @dp.message(FormPrescrizione.paziente)
 async def ricevi_paziente(message: Message, state: FSMContext):
@@ -746,13 +714,18 @@ async def ricevi_paziente(message: Message, state: FSMContext):
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=info_paz["luogo_nascita"])],
-            [KeyboardButton(text="Milano"), KeyboardButton(text="Roma"), KeyboardButton(text="Bari")],
-            [KeyboardButton(text="Foggia"), KeyboardButton(text="Cerignola"), KeyboardButton(text="San Severo")]
+            [KeyboardButton(text="Cerignola"), KeyboardButton(text="San Severo"), KeyboardButton(text="Foggia")],
+            [KeyboardButton(text="Bari"), KeyboardButton(text="Milano"), KeyboardButton(text="Roma")]
         ],
         resize_keyboard=True
     )
     await message.answer(
-        "2️⃣ **Indica la città di emissione:**",
+        f"✅ **Dati Riconosciuti e Corretti in Automatico:**\n"
+        f"• **Assistito:** `{info_paz['nome_assistito']}`\n"
+        f"• **Nascita:** `{info_paz['data_nascita']}` a `{info_paz['luogo_nascita']}` ({info_paz['sesso']})\n"
+        f"• **Codice Fiscale:** `{info_paz['cf_assistito']}`\n\n"
+        "2️⃣ **CITTÀ DEL MEDICO**\n"
+        "Scegli o scrivi la città dello studio medico (CAP, Provincia e Medico verranno abbinati in automatico):",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -765,14 +738,18 @@ async def ricevi_citta(message: Message, state: FSMContext):
 
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax"), KeyboardButton(text="Lexotan")],
-            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Contramal")],
-            [KeyboardButton(text="Tachidol"), KeyboardButton(text="Oki"), KeyboardButton(text="Toradol")]
+            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax")],
+            [KeyboardButton(text="Targin"), KeyboardButton(text="Contramal"), KeyboardButton(text="Tachidol")],
+            [KeyboardButton(text="Oki"), KeyboardButton(text="Toradol"), KeyboardButton(text="Tachipirina")]
         ],
         resize_keyboard=True
     )
     await message.answer(
-        "3️⃣ **Indica il prodotto richiesto:**",
+        f"👨‍⚕️ **Medico MioDottore Assegnato:**\n"
+        f"`{medico_dati['nome_medico']}`\n"
+        f"`{medico_dati['via_medico']} {medico_dati['cap_citta_medico']} {medico_dati['prov_medico']}`\n\n"
+        "3️⃣ **CERCA IL FARMACO SU AIFA**\n"
+        "Seleziona un farmaco o scrivilo (anche con errori, lo correggo io):",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -780,79 +757,46 @@ async def ricevi_citta(message: Message, state: FSMContext):
 @dp.message(FormPrescrizione.farmaco)
 async def ricevi_farmaco(message: Message, state: FSMContext):
     chiave_trovata = trova_farmaco_smart(message.text)
-    uid = message.from_user.id
-    is_vip = uid in VIP_USERS
 
     if chiave_trovata:
-        scheda = FARMACI_DB[chiave_trovata]
-        categoria = scheda["categoria"]
-        prezzo = scheda["prezzo"]
-
-        if not is_vip and categoria == "altro":
-            await state.clear()
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-                resize_keyboard=True
-            )
-            await message.answer(
-                "⛔ **Prodotto su Richiesta**\n\n"
-                "Per questa tipologia di farmaco l'emissione automatica è disabilitata.\n"
-                "Contatta direttamente il proprietario per l'abilitazione.",
-                reply_markup=kb,
-                parse_mode="Markdown"
-            )
-            return
-
+        scheda = AIFA_DB[chiave_trovata]
         varianti = scheda["varianti"]
         await state.update_data(
             farmaco_nome_ufficiale=scheda["nome"],
             farmaco_principio=scheda["principio"],
             farmaco_layout=scheda["layout"],
-            farmaco_categoria=categoria,
-            farmaco_prezzo=prezzo,
             varianti_correnti=varianti
         )
         botones = [[KeyboardButton(text=v["label"])] for v in varianti]
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
         await message.answer(
-            "4️⃣ **Seleziona il formato:**",
+            f"💊 **{scheda['nome']} ({scheda['principio']})** trovato nel prontuario AIFA.\n\n"
+            "4️⃣ **Seleziona il dosaggio e la formulazione esatta tra quelle autorizzate:**",
             reply_markup=kb,
             parse_mode="Markdown"
         )
     else:
-        if not is_vip:
-            await state.clear()
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-                resize_keyboard=True
-            )
-            await message.answer(
-                "⛔ **Prodotto Non Abilitato in Automatico**\n\n"
-                "Per questo farmaco è necessario contattare direttamente il proprietario.",
-                reply_markup=kb,
-                parse_mode="Markdown"
-            )
-            return
-
         nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
         varianti_custom = [
-            {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)"},
-            {"label": "30 Compresse 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "30CPR/20MG", "rip": "(Non ripetibile)"},
-            {"label": "Gocce Orali 2.5MG/ML", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)", "nota": "Formulazione Compresse - Ripetibile"},
+            {"label": "30 Compresse 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "30CPR/20MG", "rip": "(Non ripetibile)", "nota": "Formulazione Compresse Alto Dosaggio - Non Ripetibile"},
+            {"label": "Gocce Orali 2.5MG/ML (1 Flac.)", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)", "nota": "Formulazione Gocce Orali"}
         ]
         await state.update_data(
             farmaco_nome_ufficiale=nome_pulito,
             farmaco_principio="Principio Attivo",
             farmaco_layout="short",
-            farmaco_categoria="altro",
-            farmaco_prezzo=0,
             varianti_correnti=varianti_custom
         )
         botones = [[KeyboardButton(text=v["label"])] for v in varianti_custom]
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
-        await message.answer("4️⃣ **Seleziona il formato:**", reply_markup=kb, parse_mode="Markdown")
+        await message.answer(
+            f"💊 **{nome_pulito}** — Seleziona la formulazione e il dosaggio da prescrivere:",
+            reply_markup=kb,
+            parse_mode="Markdown"
+        )
 
 @dp.message(FormPrescrizione.scelta_dosaggio)
 async def ricevi_dosaggio(message: Message, state: FSMContext):
@@ -869,12 +813,17 @@ async def ricevi_dosaggio(message: Message, state: FSMContext):
     await state.update_data(variante_scelta=variante_scelta)
     await state.set_state(FormPrescrizione.quantita)
 
+    unita_tipo = "flaconi" if variante_scelta["unita"] == "Flac." else "confezioni"
     kb = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="1"), KeyboardButton(text="2"), KeyboardButton(text="3")]],
         resize_keyboard=True
     )
     await message.answer(
-        "5️⃣ **Indica la quantità:**",
+        f"🔍 **Verifica AIFA:**\n"
+        f"• Codice AIC: `{variante_scelta['aic']}`\n"
+        f"• Regime: `{variante_scelta['rip']}`\n"
+        f"• Info: _{variante_scelta['nota']}_\n\n"
+        f"5️⃣ **Quanti {unita_tipo} (`{variante_scelta['unita']}`) vuoi inserire sulla ricetta?**",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -921,17 +870,19 @@ async def ricevi_quantita(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "6️⃣ **Conferma o inserisci la data:**",
+        "6️⃣ **LUOGO E DATA DI EMISSIONE**\n"
+        f"La città è già impostata su **{citta_med}** per coincidere con il medico. Clicca sul pulsante o scrivi una data diversa (anche tipo `4 9 25`, la formatto io):",
         reply_markup=kb,
         parse_mode="Markdown"
     )
 
 @dp.message(FormPrescrizione.luogo_data)
-async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
+async def finalizza_ricetta(message: Message, state: FSMContext):
     txt_data = message.text.strip()
     dati = await state.get_data()
     citta_med = dati["citta_pura"]
 
+    # Se l'utente scrive solo una data veloce tipo "4 9 25" o "04/09/2025", aggiunge la città del medico in automatico
     m_d = re.search(r'(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})', txt_data)
     if m_d:
         gg = int(m_d.group(1))
@@ -941,67 +892,37 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
     elif "," in txt_data:
         luogo_data_finale = txt_data
     else:
-        luogo_data_finale = f"{citta_med}, {datetime.now().strftime('%d/%m/%Y')}"
+        luogo_data_finale = f"{citta_med}, { datetime.now().strftime('%d/%m/%Y') }"
 
     await state.update_data(luogo_data=luogo_data_finale)
     dati = await state.get_data()
+    await state.clear()
 
-    uid = message.from_user.id
-    if uid in VIP_USERS:
-        await state.clear()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        bc_cf = genera_barcode_pulito(dati["cf_assistito"], f"bc_cf_{timestamp}")
-        bc_aic = genera_barcode_pulito(dati["aic_farmaco"], f"bc_aic_{timestamp}")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    bc_cf = genera_barcode_pulito(dati["cf_assistito"], f"bc_cf_{timestamp}")
+    bc_aic = genera_barcode_pulito(dati["aic_farmaco"], f"bc_aic_{timestamp}")
 
-        pdf_path = os.path.join(OUTPUT_DIR, f"DOC_{timestamp}.pdf")
-        crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
+    pdf_path = os.path.join(OUTPUT_DIR, f"RICETTA_{timestamp}.pdf")
+    crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
 
-        kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-            resize_keyboard=True
-        )
-        await message.answer_document(
-            FSInputFile(pdf_path),
-            caption="✅ **Documento Emesso.**",
-            reply_markup=kb,
-            parse_mode="Markdown"
-        )
-        return
-
-    prezzo = dati.get("farmaco_prezzo", 50)
-    cat_label = "Benzodiazepine" if dati.get("farmaco_categoria") == "benzo" else "Oppioidi"
-
-    await state.set_state(FormPrescrizione.attesa_pagamento)
     kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🔄 Verifica Transazione BTC")],
-            [KeyboardButton(text="❌ Annulla")]
-        ],
+        keyboard=[[KeyboardButton(text="📄 Nuova Ricetta Medica")]],
         resize_keyboard=True
     )
-    await message.answer(
-        f"🔒 **PAGAMENTO RICHIESTO PER IL RILASCIO**\n\n"
-        f"• **Categoria:** {cat_label}\n"
-        f"• **Importo dovuto:** `{prezzo}€` in Bitcoin (BTC)\n\n"
-        f"Invia esattamente **{prezzo}€** in BTC al seguente indirizzo:\n"
-        f"`{BTC_WALLET}`\n\n"
-        f"_Dopo aver inviato la transazione sulla rete Bitcoin, incolla qui il **TXID** (Hash della transazione) oppure premi il pulsante di verifica._",
+    await message.answer_document(
+        FSInputFile(pdf_path),
+        caption=f"✅ **Ricetta Generata!**\n"
+                f"• **Assistito:** `{dati['nome_assistito']}`\n"
+                f"• **CF:** `{dati['cf_assistito']}`\n"
+                f"• **Medico:** `{dati['nome_medico']}` ({dati['cap_citta_medico']} {dati['prov_medico']})\n"
+                f"• **AIC AIFA:** `{dati['aic_farmaco']}`",
         reply_markup=kb,
-        parse_mode="Markdown"
-    )
-
-@dp.message(FormPrescrizione.attesa_pagamento)
-async def verifica_pagamento_finto(message: Message, state: FSMContext):
-    await message.answer(
-        "⏳ **Transazione non rilevata sulla Blockchain.**\n\n"
-        f"Assicurati di aver inviato l'importo esatto al wallet:\n`{BTC_WALLET}`\n\n"
-        "Attendere almeno 1 conferma di rete o contattare il proprietario fornendo il TXID.",
         parse_mode="Markdown"
     )
 
 # --- SERVER WEB PER RENDER ---
 async def handle(request):
-    return web.Response(text="Service operational.")
+    return web.Response(text="Bot is running!")
 
 async def main():
     app = web.Application()
@@ -1015,4 +936,5 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
