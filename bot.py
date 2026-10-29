@@ -49,6 +49,14 @@ MEDICI_DB = {
         "cap_citta_medico": "70121 Bari",
         "prov_medico": "(BA)",
         "tel_medico": "080555667"
+    },
+    "milano": {
+        "nome_medico": "Dott. SABBATINI ERIKA",
+        "spec_medico": "Medicina Generale",
+        "via_medico": "Via Contrada Ciro 14,",
+        "cap_citta_medico": "71042 Milano",
+        "prov_medico": "(FG)",
+        "tel_medico": "338229055"
     }
 }
 
@@ -144,22 +152,29 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
 @dp.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
-    kb = [[KeyboardButton(text="📄 Nuova Ricetta Medica")]]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📄 Nuova Ricetta Medica")]],
+        resize_keyboard=True
+    )
     await message.answer(
         "🤖 **Bot Ricette Pronto!**\n\n"
         "Clicca sul pulsante qui sotto per inserire i tuoi dati e creare la ricetta.",
-        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
 @dp.message(F.text == "📄 Nuova Ricetta Medica")
 async def step_paziente(message: Message, state: FSMContext):
     await state.set_state(FormPrescrizione.paziente)
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="PIERLUIGI LEPORE | 25")]],
+        resize_keyboard=True
+    )
     await message.answer(
         "1️⃣ **Inserisci il tuo Nome, Cognome e la tua Età**\n"
         "Scrivi nel formato: `Nome Cognome | Età`\n"
         "(Es. `PIERLUIGI LEPORE | 25`)",
-        reply_markup=ReplyKeyboardMarkup(resize_keyboard=True),
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
@@ -171,19 +186,21 @@ async def ricevi_paziente(message: Message, state: FSMContext):
     cf_paziente = fake.ssn().upper()
 
     await state.update_data(
-        nome_assistito=nome_paziente,
-        eta_assistito=eta_paziente,
+        nome_assistito=f"{nome_paziente} (Età: {eta_paziente})",
         cf_assistito=cf_paziente
     )
     await state.set_state(FormPrescrizione.citta)
 
-    kb = [
-        [KeyboardButton(text="Cerignola"), KeyboardButton(text="Foggia")],
-        [KeyboardButton(text="Milano"), KeyboardButton(text="Bari")]
-    ]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Cerignola"), KeyboardButton(text="Foggia")],
+            [KeyboardButton(text="Milano"), KeyboardButton(text="Bari")]
+        ],
+        resize_keyboard=True
+    )
     await message.answer(
         "2️⃣ **Seleziona o scrivi la città** per cercare un medico di medicina generale (verificato su MioDottore):",
-        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
@@ -206,11 +223,14 @@ async def ricevi_citta(message: Message, state: FSMContext):
     await state.update_data(**medico_scelto)
     await state.set_state(FormPrescrizione.farmaco)
 
-    kb = [[KeyboardButton(text="Depalgos")], [KeyboardButton(text="Rivotril")]]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Depalgos")], [KeyboardButton(text="Rivotril")]],
+        resize_keyboard=True
+    )
     await message.answer(
         f"✅ Medico assegnato:\n*{medico_scelto['nome_medico']}* ({medico_scelto['spec_medico']})\n\n"
         "3️⃣ **Inserisci il nome del farmaco** (es. `Depalgos` o `Rivotril`):",
-        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
@@ -220,11 +240,14 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
     await state.update_data(nome_farmaco_input=nome_farmaco)
     await state.set_state(FormPrescrizione.quantita)
 
-    kb = [[KeyboardButton(text="1"), KeyboardButton(text="2")]]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="1"), KeyboardButton(text="2")]],
+        resize_keyboard=True
+    )
     await message.answer(
         "4️⃣ **Quante confezioni (o flaconi) vuoi prescrivere?**\n"
         "Scrivi il numero (es. `1` o `2`):",
-        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
@@ -261,14 +284,17 @@ async def ricevi_quantita(message: Message, state: FSMContext):
     oggi = datetime.now().strftime("%d/%m/%Y")
     citta_luogo = dati["cap_citta_medico"].split()[1] if len(dati["cap_citta_medico"].split()) > 1 else "Milano"
 
-    kb = [
-        [KeyboardButton(text=f"{citta_luogo}, {oggi}")],
-        [KeyboardButton(text="Milano, 29/10/2026")]
-    ]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=f"{citta_luogo}, {oggi}")],
+            [KeyboardButton(text="Milano, 29/10/2026")]
+        ],
+        resize_keyboard=True
+    )
     await message.answer(
         f"🔍 *Verifica AIFA completata:* Codice AIC `{aic_generato}` | Stato: `{riga3}`\n\n"
         "5️⃣ **Inserisci Luogo e Data** per il piede pagina:",
-        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
@@ -285,14 +311,17 @@ async def finalizza_ricetta(message: Message, state: FSMContext):
     pdf_path = os.path.join(OUTPUT_DIR, f"ricetta_{timestamp}.pdf")
     crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
 
-    kb = [[KeyboardButton(text="📄 Nuova Ricetta Medica")]]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📄 Nuova Ricetta Medica")]],
+        resize_keyboard=True
+    )
     await message.answer_document(
         FSInputFile(pdf_path),
         caption="✅ **Ricetta generata con successo!**\n"
                 "• Nome ed età inseriti correttamente\n"
                 "• Medico da MioDottore integrato\n"
                 "• Principio attivo, confezioni e ripetibilità verificati via AIFA.",
-        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+        reply_markup=kb
     )
 
 # --- SERVER WEB PER RENDER ---
