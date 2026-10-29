@@ -191,6 +191,14 @@ FARMACI_DB = {
             {"label": "2.5MG/ML - Gocce 20ML", "aic": "022905051", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
+    "TAVOR": {
+        "nome": "TAVOR", "categoria": "benzo", "prezzo": 30, "principio": "Lorazepam", "layout": "short",
+        "varianti": [
+            {"label": "1MG - 20 Compresse", "aic": "023317014", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
+            {"label": "2.5MG - 20 Compresse", "aic": "023317026", "unita": "Conf.", "dos_str": "20CPR/2.5MG", "rip": "(Ripetibile)"},
+            {"label": "1MG/ML - Gocce 10ML", "aic": "023317038", "unita": "Flac.", "dos_str": "1MG/ML", "rip": "(Ripetibile)"}
+        ]
+    },
     "OKI": {
         "nome": "OKI", "categoria": "altro", "prezzo": None, "principio": "Ketoprofene", "layout": "short",
         "varianti": [
@@ -701,7 +709,7 @@ async def ricevi_citta(message: Message, state: FSMContext):
 
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax"), KeyboardButton(text="Lexotan")],
+            [KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax"), KeyboardButton(text="Tavor")],
             [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Contramal")],
             [KeyboardButton(text="Tachidol"), KeyboardButton(text="Oki"), KeyboardButton(text="Toradol")]
         ],
@@ -716,26 +724,11 @@ async def ricevi_citta(message: Message, state: FSMContext):
 @dp.message(FormPrescrizione.farmaco)
 async def ricevi_farmaco(message: Message, state: FSMContext):
     chiave_trovata = trova_farmaco_smart(message.text)
-    uid = message.from_user.id
-    is_vip = uid in VIP_USERS
 
     if chiave_trovata:
         scheda = FARMACI_DB[chiave_trovata]
         categoria = scheda["categoria"]
-        prezzo = scheda["prezzo"]
-
-        if not is_vip and categoria == "altro":
-            await state.clear()
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-                resize_keyboard=True
-            )
-            await message.answer(
-                "⛔ **Prodotto su Richiesta**\n\nPer questa tipologia l'emissione automatica è disabilitata.",
-                reply_markup=kb,
-                parse_mode="Markdown"
-            )
-            return
+        prezzo = scheda["prezzo"] if scheda["prezzo"] is not None else 30
 
         varianti = scheda["varianti"]
         await state.update_data(
@@ -750,24 +743,12 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
         await state.set_state(FormPrescrizione.scelta_dosaggio)
         await message.answer(
-            "📋 **Seleziona il formato:**",
+            f"📋 **Formato per {scheda['nome']} ({scheda['principio']}):**",
             reply_markup=kb,
             parse_mode="Markdown"
         )
     else:
-        if not is_vip:
-            await state.clear()
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-                resize_keyboard=True
-            )
-            await message.answer(
-                "⛔ **Prodotto Non Abilitato in Automatico**",
-                reply_markup=kb,
-                parse_mode="Markdown"
-            )
-            return
-
+        # Anche se scrivi un farmaco custom non in elenco, viene accettato e generato liberamente
         nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
         varianti_custom = [
             {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
@@ -779,7 +760,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
             farmaco_principio="Principio Attivo",
             farmaco_layout="long",
             farmaco_categoria="altro",
-            farmaco_prezzo=0,
+            farmaco_prezzo=30,
             varianti_correnti=varianti_custom
         )
         botones = [[KeyboardButton(text=v["label"])] for v in varianti_custom]
@@ -933,10 +914,14 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
 
 @dp.message(FormPrescrizione.attesa_pagamento)
 async def verifica_pagamento_finto(message: Message, state: FSMContext):
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+        resize_keyboard=True
+    )
     await message.answer(
         "⏳ **Transazione non rilevata sulla Blockchain.**\n\n"
         f"Assicurati di aver inviato l'importo esatto al wallet:\n`{BTC_WALLET}`",
-        reply_markup=kb if 'kb' in locals() else None,
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
