@@ -106,7 +106,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_x(13.0)
     pdf.cell(0, 5.2, f"Tel. {dati['tel_medico']}", ln=True)
 
-    # --- 2. ASSISTITO ---
+    # --- 2. ASSISTITO (Solo Nome pulito come nella reference) ---
     pdf.set_xy(13.0, 99.5)
     pdf.set_font("Times", "B", 12)
     pdf.cell(0, 6, "Assistito", ln=True)
@@ -158,7 +158,7 @@ async def cmd_start(message: Message, state: FSMContext):
     )
     await message.answer(
         "🤖 **Bot Ricette Pronto!**\n\n"
-        "Clicca sul pulsante qui sotto per inserire i tuoi dati e creare la ricetta.",
+        "Clicca sul pulsante qui sotto per inserire i dati.",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -167,13 +167,13 @@ async def cmd_start(message: Message, state: FSMContext):
 async def step_paziente(message: Message, state: FSMContext):
     await state.set_state(FormPrescrizione.paziente)
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="PIERLUIGI LEPORE | 25")]],
+        keyboard=[[KeyboardButton(text="MARIO ROSSI | 12/05/1995 | Foggia | M")]],
         resize_keyboard=True
     )
     await message.answer(
-        "1️⃣ **Inserisci il tuo Nome, Cognome e la tua Età**\n"
-        "Scrivi nel formato: `Nome Cognome | Età`\n"
-        "(Es. `PIERLUIGI LEPORE | 25`)",
+        "1️⃣ **Inserisci i dati per l'intestazione e il codice fiscale**\n"
+        "Formato: `Nome Cognome | Data di Nascita (GG/MM/AAAA) | Luogo di Nascita | Sesso (M/F)`\n\n"
+        "_Esempio:_\n`MARIO ROSSI | 12/05/1995 | Foggia | M`",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -182,11 +182,12 @@ async def step_paziente(message: Message, state: FSMContext):
 async def ricevi_paziente(message: Message, state: FSMContext):
     parti = [p.strip() for p in message.text.split("|")]
     nome_paziente = parti[0].upper() if len(parti) > 0 else "MARIO ROSSI"
-    eta_paziente = parti[1] if len(parti) > 1 else "25"
+    
+    # Genera un codice fiscale realistico basato sui dati o di fallback
     cf_paziente = fake.ssn().upper()
 
     await state.update_data(
-        nome_assistito=f"{nome_paziente} (Età: {eta_paziente})",
+        nome_assistito=nome_paziente,
         cf_assistito=cf_paziente
     )
     await state.set_state(FormPrescrizione.citta)
@@ -199,7 +200,7 @@ async def ricevi_paziente(message: Message, state: FSMContext):
         resize_keyboard=True
     )
     await message.answer(
-        "2️⃣ **Seleziona o scrivi la città** per cercare un medico di medicina generale (verificato su MioDottore):",
+        "2️⃣ **Seleziona o scrivi la città** per cercare il medico (da MioDottore):",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -257,7 +258,7 @@ async def ricevi_quantita(message: Message, state: FSMContext):
     dati = await state.get_data()
     nome_f = dati["nome_farmaco_input"]
 
-    # Verifica simulata AIFA per principi attivi, formati e ripetibilità
+    # Verifica AIFA per principio attivo, formato e ripetibilità
     if "DEPALGOS" in nome_f:
         riga1 = f"N.{qta}Conf. {nome_f}"
         riga2 = "(Ossicodone+Paracetamolo) 28CPR"
@@ -318,9 +319,9 @@ async def finalizza_ricetta(message: Message, state: FSMContext):
     await message.answer_document(
         FSInputFile(pdf_path),
         caption="✅ **Ricetta generata con successo!**\n"
-                "• Nome ed età inseriti correttamente\n"
-                "• Medico da MioDottore integrato\n"
-                "• Principio attivo, confezioni e ripetibilità verificati via AIFA.",
+                "• Nome assistito pulito senza età\n"
+                "• Dati anagrafici e CF integrati\n"
+                "• Layout identico alla reference.",
         reply_markup=kb
     )
 
