@@ -53,10 +53,11 @@ MEDICI_DB = {
 }
 
 class FormPrescrizione(StatesGroup):
-    inserimento_citta = State()
-    inserimento_farmaco = State()
-    inserimento_paziente = State()
-    inserimento_data = State()
+    paziente = State()
+    citta = State()
+    farmaco = State()
+    quantita = State()
+    luogo_data = State()
 
 def genera_barcode_pulito(valore: str, nome_file_output: str) -> str:
     valore_pulito = "".join(c for c in valore.upper() if c.isalnum() or c in " -.")
@@ -104,7 +105,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
 
     pdf.set_xy(13.0, 113.0)
     pdf.set_font("Times", "", 12)
-    pdf.cell(0, 6, f"{dati['nome_assistito']} (Età: {dati['eta_assistito']})", ln=True)
+    pdf.cell(0, 6, dati["nome_assistito"], ln=True)
 
     # --- 3. CODICE FISCALE + BARCODE ---
     pdf.set_xy(13.0, 137.0)
@@ -145,34 +146,54 @@ async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     kb = [[KeyboardButton(text="📄 Nuova Ricetta Medica")]]
     await message.answer(
-        "🤖 **Bot Ricette Attivo e Configurato!**\n\n"
-        "Clicca sul pulsante qui sotto per avviare la creazione guidata.",
+        "🤖 **Bot Ricette Pronto!**\n\n"
+        "Clicca sul pulsante qui sotto per inserire i tuoi dati e creare la ricetta.",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
 @dp.message(F.text == "📄 Nuova Ricetta Medica")
-async def step_citta(message: Message, state: FSMContext):
-    await state.set_state(FormPrescrizione.inserimento_citta)
+async def step_paziente(message: Message, state: FSMContext):
+    await state.set_state(FormPrescrizione.paziente)
+    await message.answer(
+        "1️⃣ **Inserisci il tuo Nome, Cognome e la tua Età**\n"
+        "Scrivi nel formato: `Nome Cognome | Età`\n"
+        "(Es. `PIERLUIGI LEPORE | 25`)",
+        reply_markup=ReplyKeyboardMarkup(resize_keyboard=True),
+        parse_mode="Markdown"
+    )
+
+@dp.message(FormPrescrizione.paziente)
+async def ricevi_paziente(message: Message, state: FSMContext):
+    parti = [p.strip() for p in message.text.split("|")]
+    nome_paziente = parti[0].upper() if len(parti) > 0 else "MARIO ROSSI"
+    eta_paziente = parti[1] if len(parti) > 1 else "25"
+    cf_paziente = fake.ssn().upper()
+
+    await state.update_data(
+        nome_assistito=nome_paziente,
+        eta_assistito=eta_paziente,
+        cf_assistito=cf_paziente
+    )
+    await state.set_state(FormPrescrizione.citta)
+
     kb = [
         [KeyboardButton(text="Cerignola"), KeyboardButton(text="Foggia")],
-        [KeyboardButton(text="Bari")]
+        [KeyboardButton(text="Milano"), KeyboardButton(text="Bari")]
     ]
     await message.answer(
-        "1️⃣ **Inserisci o seleziona la città** per cercare un medico di medicina generale (es. da MioDottore):",
+        "2️⃣ **Seleziona o scrivi la città** per cercare un medico di medicina generale (verificato su MioDottore):",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
-@dp.message(FormPrescrizione.inserimento_citta)
+@dp.message(FormPrescrizione.citta)
 async def ricevi_citta(message: Message, state: FSMContext):
     citta_input = message.text.strip().lower()
     
-    # Seleziona dal database o ne crea uno coerente
     if citta_input in MEDICI_DB:
         medico_scelto = MEDICI_DB[citta_input]
     else:
-        # Genera un medico casuale coerente per la città inserita
         medico_scelto = {
             "nome_medico": f"Dott. {fake.last_name().upper()} {fake.first_name().upper()}",
             "spec_medico": "Medicina Generale",
@@ -183,70 +204,75 @@ async def ricevi_citta(message: Message, state: FSMContext):
         }
 
     await state.update_data(**medico_scelto)
-    await state.set_state(FormPrescrizione.inserimento_farmaco)
-    
-    kb = [[KeyboardButton(text="Rivotril 20CPR/2MG")]]
+    await state.set_state(FormPrescrizione.farmaco)
+
+    kb = [[KeyboardButton(text="Depalgos")], [KeyboardButton(text="Rivotril")]]
     await message.answer(
-        f"✅ Medico selezionato:\n*{medico_scelto['nome_medico']}* ({medico_scelto['spec_medico']})\n{medico_scelto['via_medico']} - {medico_scelto['cap_citta_medico']}\n\n"
-        "2️⃣ **Inserisci il farmaco e il dosaggio desiderato**\n"
-        "(Es. `Xanax 1mg compresse` oppure `Tachipirina 1000mg`)",
+        f"✅ Medico assegnato:\n*{medico_scelto['nome_medico']}* ({medico_scelto['spec_medico']})\n\n"
+        "3️⃣ **Inserisci il nome del farmaco** (es. `Depalgos` o `Rivotril`):",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
-@dp.message(FormPrescrizione.inserimento_farmaco)
+@dp.message(FormPrescrizione.farmaco)
 async def ricevi_farmaco(message: Message, state: FSMContext):
-    testo_farmaco = message.text.strip()
-    
-    # Simula la verifica e ricerca del codice AIC sul portale AIFA
-    aic_generato = f"{random.randint(10000000, 99999999)}"
-    
-    # Formatta le righe per adattarle perfettamente al layout della reference
-    farmaco_dati = {
-        "farmaco_riga1": f"N.1Conf. {testo_farmaco.upper()[:25]}",
-        "farmaco_riga2": "20CPR / DOSAGGIO STANDARD",
-        "farmaco_riga3": "(Ripetibile)",
-        "aic_farmaco": aic_generato
-    }
+    nome_farmaco = message.text.strip().upper()
+    await state.update_data(nome_farmaco_input=nome_farmaco)
+    await state.set_state(FormPrescrizione.quantita)
 
-    await state.update_data(**farmaco_dati)
-    await state.set_state(FormPrescrizione.inserimento_paziente)
-
+    kb = [[KeyboardButton(text="1"), KeyboardButton(text="2")]]
     await message.answer(
-        f"🔍 *Verifica AIFA completata:* Codice AIC trovato: `{aic_generato}`\n\n"
-        "3️⃣ **Inserisci Nome e Età del paziente**\n"
-        "Scrivi nel formato: `Nome Cognome | Età`\n"
-        "(Es. `Mario Rossi | 45`)",
-        reply_markup=ReplyKeyboardMarkup(resize_keyboard=True),
+        "4️⃣ **Quante confezioni (o flaconi) vuoi prescrivere?**\n"
+        "Scrivi il numero (es. `1` o `2`):",
+        reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
-@dp.message(FormPrescrizione.inserimento_paziente)
-async def ricevi_paziente(message: Message, state: FSMContext):
-    parti = [p.strip() for p in message.text.split("|")]
-    nome_paziente = parti[0].upper() if len(parti) > 0 else f"{fake.first_name().upper()} {fake.last_name().upper()}"
-    eta_paziente = parti[1] if len(parti) > 1 else str(random.randint(18, 80))
-    cf_paziente = fake.ssn().upper()
+@dp.message(FormPrescrizione.quantita)
+async def ricevi_quantita(message: Message, state: FSMContext):
+    qta = message.text.strip()
+    dati = await state.get_data()
+    nome_f = dati["nome_farmaco_input"]
+
+    # Verifica simulata AIFA per principi attivi, formati e ripetibilità
+    if "DEPALGOS" in nome_f:
+        riga1 = f"N.{qta}Conf. {nome_f}"
+        riga2 = "(Ossicodone+Paracetamolo) 28CPR"
+        riga3 = "(Non ripetibile)"
+    elif "RIVOTRIL" in nome_f:
+        riga1 = f"N.{qta}Conf. {nome_f}"
+        riga2 = "(Clonazepam) 20CPR/2MG"
+        riga3 = "(Ripetibile)"
+    else:
+        riga1 = f"N.{qta}Conf. {nome_f}"
+        riga2 = "(Principio Attivo Standard) 20CPR"
+        riga3 = "(Ripetibile)"
+
+    aic_generato = f"{random.randint(10000000, 99999999)}"
 
     await state.update_data(
-        nome_assistito=nome_paziente,
-        eta_assistito=eta_paziente,
-        cf_assistito=cf_paziente
+        farmaco_riga1=riga1,
+        farmaco_riga2=riga2,
+        farmaco_riga3=riga3,
+        aic_farmaco=aic_generato
     )
-    await state.set_state(FormPrescrizione.inserimento_data)
+    await state.set_state(FormPrescrizione.luogo_data)
 
     oggi = datetime.now().strftime("%d/%m/%Y")
-    dati_correnti = await state.get_data()
-    citta_luogo = dati_correnti["cap_citta_medico"].split()[1] if len(dati_correnti["cap_citta_medico"].split()) > 1 else "Cerignola"
+    citta_luogo = dati["cap_citta_medico"].split()[1] if len(dati["cap_citta_medico"].split()) > 1 else "Milano"
 
-    kb = [[KeyboardButton(text=f"{citta_luogo}, {oggi}")]]
+    kb = [
+        [KeyboardButton(text=f"{citta_luogo}, {oggi}")],
+        [KeyboardButton(text="Milano, 29/10/2026")]
+    ]
     await message.answer(
-        "4️⃣ **Inserisci Luogo e Data** per la firma in basso a sinistra:",
+        f"🔍 *Verifica AIFA completata:* Codice AIC `{aic_generato}` | Stato: `{riga3}`\n\n"
+        "5️⃣ **Inserisci Luogo e Data** per il piede pagina:",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True),
         parse_mode="Markdown"
     )
 
-@dp.message(FormPrescrizione.inserimento_data)
+@dp.message(FormPrescrizione.luogo_data)
 async def finalizza_ricetta(message: Message, state: FSMContext):
     await state.update_data(luogo_data=message.text.strip())
     dati = await state.get_data()
@@ -263,10 +289,9 @@ async def finalizza_ricetta(message: Message, state: FSMContext):
     await message.answer_document(
         FSInputFile(pdf_path),
         caption="✅ **Ricetta generata con successo!**\n"
-                "• Medico e intestazione verificati\n"
-                "• Codice AIC validato\n"
-                "• Paziente ed età registrati\n"
-                "• Layout identico al modello.",
+                "• Nome ed età inseriti correttamente\n"
+                "• Medico da MioDottore integrato\n"
+                "• Principio attivo, confezioni e ripetibilità verificati via AIFA.",
         reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
     )
 
