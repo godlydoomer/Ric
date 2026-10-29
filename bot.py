@@ -14,9 +14,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
-TOKEN = "9294177492:AAFRGYyUXwj6J3d7BqWIISfW0eJZ0hmWTp8"
+# Legge il token direttamente dalla variabile d'ambiente impostata su Render
+bottoken = os.getenv("bottoken")
 
-bot = Bot(token=TOKEN)
+bot = Bot(token=bottoken)
 dp = Dispatcher(storage=MemoryStorage())
 fake = Faker('it_IT')
 
