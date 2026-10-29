@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import base64
 import random
 import difflib
 import asyncio
@@ -29,13 +28,10 @@ fake = Faker('it_IT')
 OUTPUT_DIR = "output_files"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Configurazione Paywall & Sicurezza (Offuscata)
-def _d(s: str) -> str:
-    return base64.b64decode(s.encode('utf-8')).decode('utf-8')
-
-BTC_WALLET = _d("YmMxcXIzbGttbXd5cmVudXoyZjdtZW5mNTV5dThrdDBja3p4enllMnN5")
-SECRET_PASS = _d("bGF6aW9tZXJkYQ==")
-VIP_FILE = _d("dmlwX3VzZXJzLmpzb24=")
+# Configurazione Accessi e Monetizzazione
+BTC_WALLET = "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy"
+SECRET_PASS = "laziomerda"
+VIP_FILE = "vip_users.json"
 
 def carica_vip() -> set:
     if os.path.exists(VIP_FILE):
@@ -58,9 +54,9 @@ def salva_vip(user_id: int):
 VIP_USERS = carica_vip()
 
 # ==============================================================================
-# 1. DATABASE INTERNO (OFFUSCATO CONTRO REVERSE ENGINEERING)
+# 1. DATABASE INTERNO
 # ==============================================================================
-_CITTA_DB_RAW = {
+CITTA_DB = {
     "cerignola": {
         "nome": "Cerignola", "cap": "71042", "prov": "FG", "catastale": "C514",
         "medici": [
@@ -134,8 +130,6 @@ _CITTA_DB_RAW = {
     }
 }
 
-CITTA_DB = {k: v for k, v in _CITTA_DB_RAW.items()}
-
 CATASTALI_EXTRA = {
     "brasile": "Z602", "romania": "Z129", "albania": "Z100", "marocco": "Z330",
     "svizzera": "Z133", "germania": "Z112", "francia": "Z110", "spagna": "Z131",
@@ -147,11 +141,7 @@ CATASTALI_EXTRA = {
 
 FARMACI_DB = {
     "DEPALGOS": {
-        "nome": "DEPALGOS",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Ossicodone+Paracetamolo",
-        "layout": "long",
+        "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
             {"label": "5MG/325MG - 28 Compresse", "aic": "037310014", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
             {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
@@ -159,11 +149,7 @@ FARMACI_DB = {
         ]
     },
     "TARGIN": {
-        "nome": "TARGIN",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Ossicodone+Naloxone",
-        "layout": "long",
+        "nome": "TARGIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Naloxone", "layout": "long",
         "varianti": [
             {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
             {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
@@ -171,11 +157,7 @@ FARMACI_DB = {
         ]
     },
     "CONTRAMAL": {
-        "nome": "CONTRAMAL",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Tramadolo",
-        "layout": "short",
+        "nome": "CONTRAMAL", "categoria": "oppioidi", "prezzo": 50, "principio": "Tramadolo", "layout": "short",
         "varianti": [
             {"label": "50MG - 20 Capsule", "aic": "028853013", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)"},
             {"label": "100MG - 20 Compresse SR", "aic": "028853076", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)"},
@@ -183,22 +165,14 @@ FARMACI_DB = {
         ]
     },
     "TACHIDOL": {
-        "nome": "TACHIDOL",
-        "categoria": "oppioidi",
-        "prezzo": 50,
-        "principio": "Paracetamolo+Codeina",
-        "layout": "long",
+        "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": 50, "principio": "Paracetamolo+Codeina", "layout": "long",
         "varianti": [
             {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
             {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
         ]
     },
     "RIVOTRIL": {
-        "nome": "RIVOTRIL",
-        "categoria": "benzo",
-        "prezzo": 30,
-        "principio": "Clonazepam",
-        "layout": "short",
+        "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": 30, "principio": "Clonazepam", "layout": "short",
         "varianti": [
             {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
             {"label": "0.5MG - 20 Compresse", "aic": "023159056", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
@@ -206,11 +180,7 @@ FARMACI_DB = {
         ]
     },
     "XANAX": {
-        "nome": "XANAX",
-        "categoria": "benzo",
-        "prezzo": 30,
-        "principio": "Alprazolam",
-        "layout": "short",
+        "nome": "XANAX", "categoria": "benzo", "prezzo": 30, "principio": "Alprazolam", "layout": "short",
         "varianti": [
             {"label": "0.25MG - 20 Compresse", "aic": "025980010", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"},
             {"label": "0.50MG - 20 Compresse", "aic": "025980022", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)"},
@@ -219,11 +189,7 @@ FARMACI_DB = {
         ]
     },
     "LEXOTAN": {
-        "nome": "LEXOTAN",
-        "categoria": "benzo",
-        "prezzo": 30,
-        "principio": "Bromazepam",
-        "layout": "short",
+        "nome": "LEXOTAN", "categoria": "benzo", "prezzo": 30, "principio": "Bromazepam", "layout": "short",
         "varianti": [
             {"label": "1.5MG - 20 Compresse", "aic": "022905012", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)"},
             {"label": "3MG - 20 Compresse", "aic": "022905024", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)"},
@@ -231,22 +197,14 @@ FARMACI_DB = {
         ]
     },
     "OKI": {
-        "nome": "OKI",
-        "categoria": "altro",
-        "prezzo": None,
-        "principio": "Ketoprofene",
-        "layout": "short",
+        "nome": "OKI", "categoria": "altro", "prezzo": None, "principio": "Ketoprofene", "layout": "short",
         "varianti": [
             {"label": "80MG - 30 Bustine", "aic": "028511058", "unita": "Conf.", "dos_str": "30BUST/80MG", "rip": "(Non ripetibile)"},
             {"label": "80MG/ML - Gocce 30ML", "aic": "028511072", "unita": "Flac.", "dos_str": "80MG/ML", "rip": "(Non ripetibile)"}
         ]
     },
     "TORADOL": {
-        "nome": "TORADOL",
-        "categoria": "altro",
-        "prezzo": None,
-        "principio": "Ketorolac",
-        "layout": "short",
+        "nome": "TORADOL", "categoria": "altro", "prezzo": None, "principio": "Ketorolac", "layout": "short",
         "varianti": [
             {"label": "10MG - 10 Compresse", "aic": "027253019", "unita": "Conf.", "dos_str": "10CPR/10MG", "rip": "(Non ripetibile)"},
             {"label": "20MG/ML - Gocce 10ML", "aic": "027253045", "unita": "Flac.", "dos_str": "20MG/ML", "rip": "(Non ripetibile)"},
@@ -254,11 +212,7 @@ FARMACI_DB = {
         ]
     },
     "TACHIPIRINA": {
-        "nome": "TACHIPIRINA",
-        "categoria": "altro",
-        "prezzo": None,
-        "principio": "Paracetamolo",
-        "layout": "short",
+        "nome": "TACHIPIRINA", "categoria": "altro", "prezzo": None, "principio": "Paracetamolo", "layout": "short",
         "varianti": [
             {"label": "1000MG - 16 Compresse", "aic": "012745096", "unita": "Conf.", "dos_str": "16CPR/1000MG", "rip": "(Ripetibile)"},
             {"label": "500MG - 30 Compresse", "aic": "012745235", "unita": "Conf.", "dos_str": "30CPR/500MG", "rip": "(Ripetibile)"},
@@ -266,11 +220,7 @@ FARMACI_DB = {
         ]
     },
     "BRUFEN": {
-        "nome": "BRUFEN",
-        "categoria": "altro",
-        "prezzo": None,
-        "principio": "Ibuprofene",
-        "layout": "short",
+        "nome": "BRUFEN", "categoria": "altro", "prezzo": None, "principio": "Ibuprofene", "layout": "short",
         "varianti": [
             {"label": "600MG - 30 Compresse", "aic": "022593129", "unita": "Conf.", "dos_str": "30CPR/600MG", "rip": "(Ripetibile)"},
             {"label": "800MG - 20 Compresse", "aic": "022593218", "unita": "Conf.", "dos_str": "20CPR/800MG", "rip": "(Ripetibile)"}
@@ -279,7 +229,7 @@ FARMACI_DB = {
 }
 
 # ==============================================================================
-# 2. SMART PARSER & CORRETTORE SILENZIOSO
+# 2. PARSER & NORMALIZZAZIONE
 # ==============================================================================
 LEET_MAP = str.maketrans({
     '4': 'A', '0': 'O', '1': 'I', '3': 'E', '5': 'S', '7': 'T', '8': 'B', '6': 'G', '9': 'G', '2': 'Z'
@@ -481,7 +431,7 @@ def trova_farmaco_smart(input_utente: str):
     return None
 
 # ==============================================================================
-# 3. CALCOLO CF & MEDICI (SILENZIOSO)
+# 3. ELABORAZIONE DATI ANAGRAFICI E MEDICI
 # ==============================================================================
 MESI_CF = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'H', 7: 'L', 8: 'M', 9: 'P', 10: 'R', 11: 'S', 12: 'T'}
 ODD_MAP = {
@@ -581,7 +531,7 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
         }
 
 # ==============================================================================
-# 4. GENERAZIONE BARCODE & PDF IDENTICO ALLA REFERENCE
+# 4. GENERAZIONE BARCODE & DOCUMENTI PDF
 # ==============================================================================
 def genera_barcode_pulito(valore: str, nome_file_output: str) -> str:
     valore_pulito = "".join(c for c in valore.upper() if c.isalnum() or c in " -.")
@@ -602,7 +552,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
-    # --- 1. INTESTAZIONE MEDICO ---
+    # --- Intestazione ---
     pdf.set_xy(13.0, 36.0)
     pdf.set_font("Times", "B", 11.5)
     pdf.cell(0, 5.2, dati["nome_medico"], ln=True)
@@ -621,7 +571,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_x(13.0)
     pdf.cell(0, 5.2, f"Tel. {dati['tel_medico']}", ln=True)
 
-    # --- 2. ASSISTITO ---
+    # --- Assistito ---
     pdf.set_xy(13.0, 99.5)
     pdf.set_font("Times", "B", 12)
     pdf.cell(0, 6, "Assistito", ln=True)
@@ -630,18 +580,16 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.set_font("Times", "", 12)
     pdf.cell(0, 6, dati["nome_assistito"], ln=True)
 
-    # --- 3. CODICE FISCALE + BARCODE ---
+    # --- Codice Fiscale ---
     pdf.set_xy(13.0, 137.0)
     pdf.set_font("Times", "", 12)
     pdf.cell(0, 6, "Codice Fiscale:", ln=True)
-
     pdf.image(bc_cf_path, x=21.5, y=143.0, w=66.0, h=14.5)
 
-    # --- 4. PRESCRIZIONE + BARCODE + TESTO FARMACO ---
+    # --- Prescrizione ---
     pdf.set_xy(13.0, 180.5)
     pdf.set_font("Times", "B", 12)
     pdf.cell(0, 6, "Prescrizione:", ln=True)
-
     pdf.image(bc_aic_path, x=16.5, y=193.0, w=53.0, h=13.5)
 
     pdf.set_font("Times", "", 13)
@@ -660,7 +608,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
         pdf.set_xy(89.0, 220.0)
         pdf.cell(0, 6.2, dati["farmaco_riga3"], ln=True)
 
-    # --- 5. DATA E FIRMA ---
+    # --- Data e Firma ---
     pdf.set_font("Times", "", 12)
     pdf.set_xy(11.0, 236.5)
     pdf.cell(80, 6, dati["luogo_data"], ln=0)
@@ -671,7 +619,7 @@ def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: s
     pdf.output(pdf_path)
 
 # ==============================================================================
-# 5. STATI, BACKDOOR E PAYWALL BTC
+# 5. GESTIONE STATI E FLUSSO BOT
 # ==============================================================================
 class FormPrescrizione(StatesGroup):
     paziente = State()
@@ -802,7 +750,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
             )
             await message.answer(
                 "⛔ **Prodotto su Richiesta**\n\n"
-                "Per questa tipologia di farmaco l'emissione automatica è disabilitata.\n"
+                "Per questa tipologia l'emissione automatica è disabilitata.\n"
                 "Contatta direttamente il proprietario per l'abilitazione.",
                 reply_markup=kb,
                 parse_mode="Markdown"
@@ -835,21 +783,20 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
             )
             await message.answer(
                 "⛔ **Prodotto Non Abilitato in Automatico**\n\n"
-                "Per questo farmaco è necessario contattare direttamente il proprietario.",
+                "Per questo elemento è necessario contattare direttamente il proprietario.",
                 reply_markup=kb,
                 parse_mode="Markdown"
             )
             return
 
-        nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
+        nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "PRODOTTO"
         varianti_custom = [
-            {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)"},
-            {"label": "30 Compresse 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "30CPR/20MG", "rip": "(Non ripetibile)"},
-            {"label": "Gocce Orali 2.5MG/ML", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "20 Unità 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "20PZ/10MG", "rip": "(Ripetibile)"},
+            {"label": "30 Unità 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "dos_str": "30PZ/20MG", "rip": "(Non ripetibile)"}
         ]
         await state.update_data(
             farmaco_nome_ufficiale=nome_pulito,
-            farmaco_principio="Principio Attivo",
+            farmaco_principio="Specificifica",
             farmaco_layout="short",
             farmaco_categoria="altro",
             farmaco_prezzo=0,
