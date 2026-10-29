@@ -134,21 +134,22 @@ CATASTALI_EXTRA = {
     "barletta": "A669", "andria": "A285", "trani": "L328", "manfredonia": "E885"
 }
 
+# Database esteso con i principi attivi esatti per ogni voce principale
 FARMACI_DB = {
     "DEPALGOS": {
         "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
             {"label": "5MG/325MG - 28 Compresse", "aic": "037310014", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "10MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "20MG/325MG", "rip": "(Non ripetibile)"}
+            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)"}
         ]
     },
     "TARGIN": {
         "nome": "TARGIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Naloxone", "layout": "long",
         "varianti": [
-            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "10MG/5MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "20MG/10MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
+            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"}
         ]
     },
     "CONTRAMAL": {
@@ -162,8 +163,15 @@ FARMACI_DB = {
     "TACHIDOL": {
         "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": 50, "principio": "Paracetamolo+Codeina", "layout": "long",
         "varianti": [
-            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "500MG/30MG", "rip": "(Non ripetibile)"},
-            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "500MG/30MG", "rip": "(Non ripetibile)"}
+            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
+            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
+        ]
+    },
+    "PARACODINA": {
+        "nome": "PARACODINA", "categoria": "oppioidi", "prezzo": 50, "principio": "Diidrocodeina", "layout": "short",
+        "varianti": [
+            {"label": "10MG - 20 Compresse", "aic": "019482012", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Non ripetibile)"},
+            {"label": "2.5mg/ml - Sciroppo 180g", "aic": "019482024", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Non ripetibile)"}
         ]
     },
     "RIVOTRIL": {
@@ -197,6 +205,13 @@ FARMACI_DB = {
             {"label": "1MG - 20 Compresse", "aic": "023317014", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
             {"label": "2.5MG - 20 Compresse", "aic": "023317026", "unita": "Conf.", "dos_str": "20CPR/2.5MG", "rip": "(Ripetibile)"},
             {"label": "1MG/ML - Gocce 10ML", "aic": "023317038", "unita": "Flac.", "dos_str": "1MG/ML", "rip": "(Ripetibile)"}
+        ]
+    },
+    "VALIUM": {
+        "nome": "VALIUM", "categoria": "benzo", "prezzo": 30, "principio": "Diazepam", "layout": "short",
+        "varianti": [
+            {"label": "5MG - 20 Compresse", "aic": "019973024", "unita": "Conf.", "dos_str": "20CPR/5MG", "rip": "(Ripetibile)"},
+            {"label": "5MG/ML - Gocce 10ML", "aic": "019973048", "unita": "Flac.", "dos_str": "5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "OKI": {
@@ -710,7 +725,7 @@ async def ricevi_citta(message: Message, state: FSMContext):
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax"), KeyboardButton(text="Tavor")],
-            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Contramal")],
+            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Paracodina")],
             [KeyboardButton(text="Tachidol"), KeyboardButton(text="Oki"), KeyboardButton(text="Toradol")]
         ],
         resize_keyboard=True
@@ -748,7 +763,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
             parse_mode="Markdown"
         )
     else:
-        # Anche se scrivi un farmaco custom non in elenco, viene accettato e generato liberamente
+        # Se scrivi qualsiasi altro farmaco, genera una variante dinamica pulita senza blocchi
         nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
         varianti_custom = [
             {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
