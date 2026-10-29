@@ -14,7 +14,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
-TOKEN = "9294177492:AAHB37c-tHDGMRN_Ze0ABKls6M2VYHIBSI4"
+TOKEN = "9294177492:AAFRGYyUXwj6J3d7BqWIISfW0eJZ0hmWTp8"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -116,7 +116,6 @@ async def main():
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
     
-    # Avvia il polling di telegram in contemporanea al server web
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
