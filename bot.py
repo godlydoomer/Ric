@@ -86,6 +86,25 @@ def aggiungi_crediti_gratuiti(user_id: int, quantita: int = 3):
 
 VIP_USERS = carica_vip()
 
+def calcola_checksum_aic(aic_8_cifre: str) -> str:
+    pulito = "".join(c for c in str(aic_8_cifre) if c.isdigit()).zfill(8)[:8]
+    somma = 0
+    for idx, ch in enumerate(pulito):
+        cifra = int(ch)
+        if (idx + 1) % 2 == 0:
+            doppio = cifra * 2
+            somma += (doppio // 10) + (doppio % 10)
+        else:
+            somma += cifra
+    check_digit = somma % 10
+    return f"{pulito}{check_digit}"
+
+def valida_aic(aic_9_cifre: str) -> bool:
+    pulito = "".join(c for c in str(aic_9_cifre) if c.isdigit())
+    if len(pulito) != 9:
+        return False
+    return calcola_checksum_aic(pulito[:8]) == pulito
+
 CITTA_DB = {
     "cerignola": {
         "nome": "Cerignola", "cap": "71042", "prov": "FG", "catastale": "C514",
@@ -173,171 +192,177 @@ FARMACI_DB = {
     "DEPALGOS": {
         "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
-            {"label": "5MG/325MG - 28 Compresse", "aic": "037310014", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/325MG - 28 Compresse", "aic": "037310026", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/325MG - 28 Compresse", "aic": "037310038", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG/325MG - 28 Compresse", "aic": "035313028", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
+            {"label": "10MG/325MG - 28 Compresse", "aic": "035313055", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG/325MG - 28 Compresse", "aic": "035313081", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)"}
         ]
     },
     "TARGIN": {
         "nome": "TARGIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Naloxone", "layout": "long",
         "varianti": [
-            {"label": "5MG/2.5MG - 28 Compresse", "aic": "039405018", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/5MG - 28 Compresse", "aic": "039405057", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/10MG - 28 Compresse", "aic": "039405095", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG/2.5MG - 28 Compresse RP", "aic": "039586033", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
+            {"label": "10MG/5MG - 28 Compresse RP", "aic": "039586159", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG/10MG - 28 Compresse RP", "aic": "039586274", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"},
+            {"label": "40MG/20MG - 28 Compresse RP", "aic": "039586375", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "40MG/20MG", "rip": "(Non ripetibile)"}
         ]
     },
     "OXYCONTIN": {
         "nome": "OXYCONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone", "layout": "short",
         "varianti": [
-            {"label": "5MG - 28 Compresse RP", "aic": "034789016", "unita": "Conf.", "dos_str": "28CPR/5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG - 28 Compresse RP", "aic": "034789030", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG - 28 Compresse RP", "aic": "034789055", "unita": "Conf.", "dos_str": "28CPR/20MG", "rip": "(Non ripetibile)"}
+            {"label": "5MG - 28 Compresse RP", "aic": "034435267", "unita": "Conf.", "dos_str": "28CPR/5MG", "rip": "(Non ripetibile)"},
+            {"label": "10MG - 28 Compresse RP", "aic": "034435014", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
+            {"label": "20MG - 28 Compresse RP", "aic": "034435077", "unita": "Conf.", "dos_str": "28CPR/20MG", "rip": "(Non ripetibile)"},
+            {"label": "40MG - 28 Compresse RP", "aic": "034435139", "unita": "Conf.", "dos_str": "28CPR/40MG", "rip": "(Non ripetibile)"},
+            {"label": "80MG - 28 Compresse RP", "aic": "034435192", "unita": "Conf.", "dos_str": "28CPR/80MG", "rip": "(Non ripetibile)"}
         ]
     },
     "CONTRAMAL": {
         "nome": "CONTRAMAL", "categoria": "oppioidi", "prezzo": 50, "principio": "Tramadolo", "layout": "short",
         "varianti": [
-            {"label": "50MG - 20 Capsule", "aic": "028853013", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG - 20 Compresse SR", "aic": "028853076", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG/ML - Gocce 10ML", "aic": "028853049", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Non ripetibile)"}
+            {"label": "50MG - 20 Capsule", "aic": "028853012", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)"},
+            {"label": "100MG - 20 Compresse SR", "aic": "028853036", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)"},
+            {"label": "100MG/ML - Gocce 10ML", "aic": "028853024", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Non ripetibile)"}
         ]
     },
     "TACHIDOL": {
         "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": 50, "principio": "Paracetamolo+Codeina", "layout": "long",
         "varianti": [
-            {"label": "500MG/30MG - 16 Bustine", "aic": "034185015", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
-            {"label": "500MG/30MG - 16 Compresse", "aic": "034185039", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
+            {"label": "500MG/30MG - 10 Bustine", "aic": "031825021", "unita": "Conf.", "qta_str": "10BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
+            {"label": "500MG/30MG - 16 Bustine", "aic": "031825072", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
+            {"label": "500MG/30MG - 16 Compresse", "aic": "031825060", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
         ]
     },
     "PARACODINA": {
         "nome": "PARACODINA", "categoria": "oppioidi", "prezzo": 50, "principio": "Diidrocodeina", "layout": "short",
         "varianti": [
-            {"label": "10MG - 20 Compresse", "aic": "019482012", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "2.5mg/ml - Sciroppo 180g", "aic": "019482024", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Non ripetibile)"}
+            {"label": "10.25MG/ML - Gocce 15G", "aic": "015960014", "unita": "Flac.", "dos_str": "10.25MG/ML", "rip": "(Ripetibile)"},
+            {"label": "2.4MG/ML - Sciroppo 100G", "aic": "008096024", "unita": "Flac.", "dos_str": "2.4MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "DUROGESIC": {
         "nome": "DUROGESIC", "categoria": "oppioidi", "prezzo": 50, "principio": "Fentanyl", "layout": "short",
         "varianti": [
-            {"label": "12MCG/H - 5 Cerotti", "aic": "027092147", "unita": "Conf.", "dos_str": "5CEROTTI/12MCG", "rip": "(Non ripetibile)"},
-            {"label": "25MCG/H - 5 Cerotti", "aic": "027092022", "unita": "Conf.", "dos_str": "5CEROTTI/25MCG", "rip": "(Non ripetibile)"},
-            {"label": "50MCG/H - 5 Cerotti", "aic": "027092058", "unita": "Conf.", "dos_str": "5CEROTTI/50MCG", "rip": "(Non ripetibile)"}
+            {"label": "12MCG/H - 3 Cerotti", "aic": "029212091", "unita": "Conf.", "dos_str": "3CEROTTI/12MCG", "rip": "(Non ripetibile)"},
+            {"label": "25MCG/H - 3 Cerotti", "aic": "029212053", "unita": "Conf.", "dos_str": "3CEROTTI/25MCG", "rip": "(Non ripetibile)"},
+            {"label": "50MCG/H - 3 Cerotti", "aic": "029212065", "unita": "Conf.", "dos_str": "3CEROTTI/50MCG", "rip": "(Non ripetibile)"}
         ]
     },
     "MS CONTIN": {
         "nome": "MS CONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Morfina Solfato", "layout": "short",
         "varianti": [
-            {"label": "10MG - 28 Compresse RP", "aic": "026938015", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "30MG - 28 Compresse RP", "aic": "026938039", "unita": "Conf.", "dos_str": "28CPR/30MG", "rip": "(Non ripetibile)"}
+            {"label": "10MG - 16 Compresse RP", "aic": "025624014", "unita": "Conf.", "dos_str": "16CPR/10MG", "rip": "(Non ripetibile)"},
+            {"label": "30MG - 16 Compresse RP", "aic": "025624026", "unita": "Conf.", "dos_str": "16CPR/30MG", "rip": "(Non ripetibile)"},
+            {"label": "60MG - 16 Compresse RP", "aic": "025624038", "unita": "Conf.", "dos_str": "16CPR/60MG", "rip": "(Non ripetibile)"}
         ]
     },
     "PALEXIA": {
         "nome": "PALEXIA", "categoria": "oppioidi", "prezzo": 50, "principio": "Tapentadolo", "layout": "short",
         "varianti": [
-            {"label": "50MG - 30 Compresse RP", "aic": "040312019", "unita": "Conf.", "dos_str": "30CPR/50MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG - 30 Compresse RP", "aic": "040312072", "unita": "Conf.", "dos_str": "30CPR/100MG", "rip": "(Non ripetibile)"}
+            {"label": "50MG - 30 Compresse RP", "aic": "040422420", "unita": "Conf.", "dos_str": "30CPR/50MG", "rip": "(Non ripetibile)"},
+            {"label": "100MG - 30 Compresse RP", "aic": "040422545", "unita": "Conf.", "dos_str": "30CPR/100MG", "rip": "(Non ripetibile)"}
         ]
     },
     "RIVOTRIL": {
         "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": 30, "principio": "Clonazepam", "layout": "short",
         "varianti": [
-            {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
             {"label": "0.5MG - 20 Compresse", "aic": "023159056", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
+            {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
             {"label": "2.5MG/ML - Gocce 10ML", "aic": "023159031", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "XANAX": {
         "nome": "XANAX", "categoria": "benzo", "prezzo": 30, "principio": "Alprazolam", "layout": "short",
         "varianti": [
-            {"label": "0.25MG - 20 Compresse", "aic": "025980010", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"},
-            {"label": "0.50MG - 20 Compresse", "aic": "025980022", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)"},
-            {"label": "1MG - 20 Compresse", "aic": "025980034", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "0.75MG/ML - Gocce 20ML", "aic": "025980059", "unita": "Flac.", "dos_str": "0.75MG/ML", "rip": "(Ripetibile)"}
+            {"label": "0.25MG - 20 Compresse", "aic": "025980098", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"},
+            {"label": "0.50MG - 20 Compresse", "aic": "025980100", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)"},
+            {"label": "1MG - 20 Compresse", "aic": "025980112", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
+            {"label": "0.75MG/ML - Gocce 20ML", "aic": "025980050", "unita": "Flac.", "dos_str": "0.75MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "LEXOTAN": {
         "nome": "LEXOTAN", "categoria": "benzo", "prezzo": 30, "principio": "Bromazepam", "layout": "short",
         "varianti": [
-            {"label": "1.5MG - 20 Compresse", "aic": "022905012", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)"},
-            {"label": "3MG - 20 Compresse", "aic": "022905024", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG/ML - Gocce 20ML", "aic": "022905051", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "1.5MG - 20 Compresse", "aic": "022905048", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)"},
+            {"label": "3MG - 20 Compresse", "aic": "022905051", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)"},
+            {"label": "2.5MG/ML - Gocce 20ML", "aic": "022905036", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "TAVOR": {
         "nome": "TAVOR", "categoria": "benzo", "prezzo": 30, "principio": "Lorazepam", "layout": "short",
         "varianti": [
-            {"label": "1MG - 20 Compresse", "aic": "023317014", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG - 20 Compresse", "aic": "023317026", "unita": "Conf.", "dos_str": "20CPR/2.5MG", "rip": "(Ripetibile)"},
-            {"label": "1MG/ML - Gocce 10ML", "aic": "023317038", "unita": "Flac.", "dos_str": "1MG/ML", "rip": "(Ripetibile)"}
+            {"label": "1MG - 20 Compresse", "aic": "022531016", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
+            {"label": "2.5MG - 20 Compresse", "aic": "022531028", "unita": "Conf.", "dos_str": "20CPR/2.5MG", "rip": "(Ripetibile)"},
+            {"label": "2MG/ML - Gocce 10ML", "aic": "022531055", "unita": "Flac.", "dos_str": "2MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "VALIUM": {
         "nome": "VALIUM", "categoria": "benzo", "prezzo": 30, "principio": "Diazepam", "layout": "short",
         "varianti": [
-            {"label": "5MG - 20 Compresse", "aic": "019973024", "unita": "Conf.", "dos_str": "20CPR/5MG", "rip": "(Ripetibile)"},
-            {"label": "5MG/ML - Gocce 10ML", "aic": "019973048", "unita": "Flac.", "dos_str": "5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "5MG - 20 Capsule", "aic": "019973029", "unita": "Conf.", "dos_str": "20CPS/5MG", "rip": "(Ripetibile)"},
+            {"label": "5MG/ML - Gocce 20ML", "aic": "019973031", "unita": "Flac.", "dos_str": "5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "EN": {
         "nome": "EN", "categoria": "benzo", "prezzo": 30, "principio": "Delorazepam", "layout": "short",
         "varianti": [
-            {"label": "1MG - 20 Compresse", "aic": "024222018", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "2MG - 20 Compresse", "aic": "024222020", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
-            {"label": "2MG/ML - Gocce 20ML", "aic": "024222044", "unita": "Flac.", "dos_str": "2MG/ML", "rip": "(Ripetibile)"}
+            {"label": "0.5MG - 20 Compresse", "aic": "023759049", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
+            {"label": "1MG - 20 Compresse", "aic": "023759052", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
+            {"label": "2MG - 20 Compresse", "aic": "023759064", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
+            {"label": "1MG/ML - Gocce 20ML", "aic": "023759076", "unita": "Flac.", "dos_str": "1MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "HALCION": {
         "nome": "HALCION", "categoria": "benzo", "prezzo": 30, "principio": "Triazolam", "layout": "short",
         "varianti": [
-            {"label": "0.125MG - 20 Compresse", "aic": "023961019", "unita": "Conf.", "dos_str": "20CPR/0.125MG", "rip": "(Ripetibile)"},
-            {"label": "0.25MG - 20 Compresse", "aic": "023961021", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"}
+            {"label": "0.125MG - 20 Compresse", "aic": "024055059", "unita": "Conf.", "dos_str": "20CPR/0.125MG", "rip": "(Ripetibile)"},
+            {"label": "0.25MG - 20 Compresse", "aic": "024055046", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"}
         ]
     },
     "STILNOX": {
         "nome": "STILNOX", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
         "varianti": [
-            {"label": "10MG - 20 Compresse", "aic": "027872013", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)"}
+            {"label": "10MG - 30 Compresse", "aic": "026698023", "unita": "Conf.", "dos_str": "30CPR/10MG", "rip": "(Non ripetibile)"}
         ]
     },
     "ZOLPIDEM": {
         "nome": "ZOLPIDEM", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
         "varianti": [
-            {"label": "10MG - 20 Compresse", "aic": "035123015", "unita": "Conf.", "dos_str": "20CPR/10MG", "rip": "(Ripetibile)"}
+            {"label": "10MG - 30 Compresse", "aic": "035789027", "unita": "Conf.", "dos_str": "30CPR/10MG", "rip": "(Non ripetibile)"}
         ]
     },
     "IMOVANE": {
         "nome": "IMOVANE", "categoria": "benzo", "prezzo": 30, "principio": "Zopiclone", "layout": "short",
         "varianti": [
-            {"label": "7.5MG - 20 Compresse", "aic": "026842017", "unita": "Conf.", "dos_str": "20CPR/7.5MG", "rip": "(Ripetibile)"}
+            {"label": "7.5MG - 20 Compresse", "aic": "027269013", "unita": "Conf.", "dos_str": "20CPR/7.5MG", "rip": "(Ripetibile)"}
         ]
     },
     "LYRICA": {
         "nome": "LYRICA", "categoria": "altro", "prezzo": 30, "principio": "Pregabalin", "layout": "short",
         "varianti": [
-            {"label": "75MG - 56 Capsule", "aic": "036774052", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
-            {"label": "150MG - 56 Capsule", "aic": "036774138", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"},
-            {"label": "300MG - 56 Capsule", "aic": "036774215", "unita": "Conf.", "dos_str": "56CAPS/300MG", "rip": "(Ripetibile)"}
+            {"label": "75MG - 56 Capsule", "aic": "036476101", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
+            {"label": "150MG - 56 Capsule", "aic": "036476176", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"},
+            {"label": "300MG - 56 Capsule", "aic": "036476253", "unita": "Conf.", "dos_str": "56CAPS/300MG", "rip": "(Ripetibile)"}
         ]
     },
     "PREGABALIN": {
         "nome": "PREGABALIN", "categoria": "altro", "prezzo": 30, "principio": "Pregabalin", "layout": "short",
         "varianti": [
-            {"label": "75MG - 56 Capsule", "aic": "042111023", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
-            {"label": "150MG - 56 Capsule", "aic": "042111086", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"}
+            {"label": "75MG - 56 Capsule", "aic": "043934098", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
+            {"label": "150MG - 56 Capsule", "aic": "043934163", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"}
         ]
     },
     "NEURONTIN": {
         "nome": "NEURONTIN", "categoria": "altro", "prezzo": 30, "principio": "Gabapentin", "layout": "short",
         "varianti": [
-            {"label": "300MG - 50 Capsule", "aic": "028211029", "unita": "Conf.", "dos_str": "50CAPS/300MG", "rip": "(Ripetibile)"},
-            {"label": "400MG - 50 Capsule", "aic": "028211043", "unita": "Conf.", "dos_str": "50CAPS/400MG", "rip": "(Ripetibile)"}
+            {"label": "300MG - 50 Capsule", "aic": "028740026", "unita": "Conf.", "dos_str": "50CAPS/300MG", "rip": "(Ripetibile)"},
+            {"label": "400MG - 30 Capsule", "aic": "028740038", "unita": "Conf.", "dos_str": "30CAPS/400MG", "rip": "(Ripetibile)"}
         ]
     },
     "OKI": {
         "nome": "OKI", "categoria": "altro", "prezzo": None, "principio": "Ketoprofene", "layout": "short",
         "varianti": [
-            {"label": "80MG - 30 Bustine", "aic": "028511058", "unita": "Conf.", "dos_str": "30BUST/80MG", "rip": "(Non ripetibile)"},
-            {"label": "80MG/ML - Gocce 30ML", "aic": "028511072", "unita": "Flac.", "dos_str": "80MG/ML", "rip": "(Non ripetibile)"}
+            {"label": "80MG - 30 Bustine", "aic": "028511086", "unita": "Conf.", "dos_str": "30BUST/80MG", "rip": "(Non ripetibile)"},
+            {"label": "80MG/ML - Gocce 30ML", "aic": "028511098", "unita": "Flac.", "dos_str": "80MG/ML", "rip": "(Non ripetibile)"}
         ]
     },
     "TORADOL": {
@@ -345,7 +370,7 @@ FARMACI_DB = {
         "varianti": [
             {"label": "10MG - 10 Compresse", "aic": "027253019", "unita": "Conf.", "dos_str": "10CPR/10MG", "rip": "(Non ripetibile)"},
             {"label": "20MG/ML - Gocce 10ML", "aic": "027253045", "unita": "Flac.", "dos_str": "20MG/ML", "rip": "(Non ripetibile)"},
-            {"label": "30MG/ML - 3 Fiale Iniett.", "aic": "027253033", "unita": "Conf.", "dos_str": "3FIALE/30MG", "rip": "(Non ripetibile)"}
+            {"label": "30MG/ML - 3 Fiale Iniett.", "aic": "027253021", "unita": "Conf.", "dos_str": "3FIALE/30MG", "rip": "(Non ripetibile)"}
         ]
     },
     "TACHIPIRINA": {
@@ -359,8 +384,8 @@ FARMACI_DB = {
     "BRUFEN": {
         "nome": "BRUFEN", "categoria": "altro", "prezzo": None, "principio": "Ibuprofene", "layout": "short",
         "varianti": [
-            {"label": "600MG - 30 Compresse", "aic": "022593129", "unita": "Conf.", "dos_str": "30CPR/600MG", "rip": "(Ripetibile)"},
-            {"label": "800MG - 20 Compresse", "aic": "022593218", "unita": "Conf.", "dos_str": "20CPR/800MG", "rip": "(Ripetibile)"}
+            {"label": "600MG - 30 Compresse", "aic": "022593120", "unita": "Conf.", "dos_str": "30CPR/600MG", "rip": "(Ripetibile)"},
+            {"label": "800MG - 20 Compresse", "aic": "022593219", "unita": "Conf.", "dos_str": "20CPR/800MG", "rip": "(Ripetibile)"}
         ]
     }
 }
@@ -661,10 +686,16 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
             "tel_medico": f"338{random.randint(100000, 999999)}"
         }
 
-def genera_barcode_pulito(valore: str, nome_file_output: str) -> str:
-    valore_pulito = "".join(c for c in valore.upper() if c.isalnum() or c in " -.")
-    if not valore_pulito:
+def genera_barcode_pulito(valore: str, nome_file_output: str, is_aic: bool = False) -> str:
+    valore_pulito = "".join(c for c in str(valore).upper() if c.isalnum() or c in " -.")
+    if is_aic:
+        cifre = "".join(c for c in valore_pulito if c.isdigit()).zfill(9)
+        if not valida_aic(cifre):
+            cifre = calcola_checksum_aic(cifre[:8])
+        valore_pulito = cifre
+    elif not valore_pulito:
         valore_pulito = "000000000"
+
     code39_class = barcode.get_barcode_class('code39')
     writer_options = {
         'write_text': False,
@@ -902,10 +933,11 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
         )
     else:
         nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
+        base_rand = f"0{random.randint(30000, 45000)}"
         varianti_custom = [
-            {"label": "20 Compresse 10MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
-            {"label": "30 Compresse 20MG", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Conf.", "qta_str": "30CPR", "dos_str": "20MG", "rip": "(Non ripetibile)"},
-            {"label": "Gocce Orali 2.5MG/ML", "aic": f"0{random.randint(10000000, 99999999)}", "unita": "Flac.", "qta_str": "10ML", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
+            {"label": "20 Compresse 10MG", "aic": calcola_checksum_aic(f"{base_rand}01"), "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
+            {"label": "30 Compresse 20MG", "aic": calcola_checksum_aic(f"{base_rand}02"), "unita": "Conf.", "qta_str": "30CPR", "dos_str": "20MG", "rip": "(Non ripetibile)"},
+            {"label": "Gocce Orali 2.5MG/ML", "aic": calcola_checksum_aic(f"{base_rand}03"), "unita": "Flac.", "qta_str": "10ML", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
         ]
         await state.update_data(
             farmaco_nome_ufficiale=nome_pulito,
@@ -1027,8 +1059,8 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
     if is_vip or ha_credito:
         await state.clear()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        bc_cf = genera_barcode_pulito(dati["cf_assistito"], f"bc_cf_{timestamp}")
-        bc_aic = genera_barcode_pulito(dati["aic_farmaco"], f"bc_aic_{timestamp}")
+        bc_cf = genera_barcode_pulito(dati["cf_assistito"], f"bc_cf_{timestamp}", is_aic=False)
+        bc_aic = genera_barcode_pulito(dati["aic_farmaco"], f"bc_aic_{timestamp}", is_aic=True)
 
         pdf_path = os.path.join(OUTPUT_DIR, f"DOC_{timestamp}.pdf")
         crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
