@@ -31,8 +31,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # CONFIGURAZIONE WALLET, PREZZI E PASSWORD
 # ==========================================
 BTC_WALLET = os.getenv("BTC_WALLET", "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy")
-PREZZO_BENZO = 30
-PREZZO_OPPIOIDI = 50
+PREZZO_BENZO = 20
+PREZZO_OPPIOIDI = 40
 SECRET_PASS = "laziomerda"
 FREE_PASS = "forzafoggia"
 VIP_FILE = "vip_users.json"
@@ -695,8 +695,6 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
             "tel_medico": med["tel"]
         }
     else:
-        # Se la città non è nel DB, pesca randomicamente un medico dal database completo
-        # adattandolo alla città richiesta oppure generandone uno randomico
         tutti_medici_db = [m for c in CITTA_DB.values() for m in c["medici"]]
         med_random_db = random.choice(tutti_medici_db)
         nome_c = chiave.title()
@@ -803,7 +801,6 @@ class FormPrescrizione(StatesGroup):
     citta = State()
     farmaco = State()
     scelta_dosaggio = State()
-    quantita = State()
     luogo_data = State()
     attesa_pagamento = State()
 
@@ -897,7 +894,6 @@ async def ricevi_paziente(message: Message, state: FSMContext):
     )
     await state.set_state(FormPrescrizione.citta)
 
-    # Costruzione tastiera SOLO con città principali (Foggia, San Severo, Cerignola ecc. mai nei bottoni)
     righe_tastiera = []
     luogo_nascita_norm = info_paz["luogo_nascita"].strip().lower()
     if luogo_nascita_norm not in CITTA_ESCLUSE_BOTTONI and luogo_nascita_norm not in ["milano", "roma", "bari", "napoli", "torino", "bologna"]:
@@ -918,7 +914,6 @@ async def ricevi_paziente(message: Message, state: FSMContext):
 
 @dp.message(FormPrescrizione.citta)
 async def ricevi_citta(message: Message, state: FSMContext):
-    # A ogni ricetta sceglie randomicamente il medico tra quelli del database
     medico_dati = risolvi_citta_e_medico(message.text)
     await state.update_data(**medico_dati)
     await state.set_state(FormPrescrizione.farmaco)
@@ -996,28 +991,10 @@ async def ricevi_dosaggio(message: Message, state: FSMContext):
             variante_scelta = v
             break
 
-    await state.update_data(variante_scelta=variante_scelta)
-    await state.set_state(FormPrescrizione.quantita)
-
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="1"), KeyboardButton(text="2"), KeyboardButton(text="3")]],
-        resize_keyboard=True
-    )
-    await message.answer(
-        "🔢 **Indica la quantità:**",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
-
-@dp.message(FormPrescrizione.quantita)
-async def ricevi_quantita(message: Message, state: FSMContext):
-    qta_num = "".join(c for c in message.text.strip() if c.isdigit()) or "1"
-    dati = await state.get_data()
-    
     nome_f = dati["farmaco_nome_ufficiale"]
     princ = dati["farmaco_principio"]
     layout = dati["farmaco_layout"]
-    var = dati["variante_scelta"]
+    var = variante_scelta
     unita = var["unita"]
 
     if princ and princ != "Specificifica" and princ != "Principio Attivo":
@@ -1025,19 +1002,36 @@ async def ricevi_quantita(message: Message, state: FSMContext):
     else:
         princ_str = ""
 
-    if layout == "long":
-        riga1 = f"N.{qta_num}{unita} {nome_f}"
-        riga2 = f"{princ_str} {var.get('qta_str', '')}".strip()
-        riga3 = f"{var['dos_str']}"
-        riga4 = f"{var['rip']}"
-    else:
-        if princ_str:
-            riga1 = f"N.{qta_num}{unita} {nome_f} {princ_str}"
+    is_ripetibile = "(Ripetibile)" in var.get("rip", "")
+
+    # SE RIPETIBILE -> NESSUN NUMERO DI CONFEZIONI
+    if is_ripetibile:
+        if layout == "long":
+            riga1 = f"{nome_f}"
+            riga2 = f"{princ_str} {var.get('qta_str', '')}".strip()
+            riga3 = f"{var['dos_str']}"
+            riga4 = f"{var['rip']}"
         else:
+            riga1 = f"{nome_f} {princ_str}".strip()
+            riga2 = f"{var['dos_str']}"
+            riga3 = f"{var['rip']}"
+            riga4 = None
+    else:
+        # SE NON RIPETIBILE -> MANTIENE N.1Conf.
+        qta_num = "1"
+        if layout == "long":
             riga1 = f"N.{qta_num}{unita} {nome_f}"
-        riga2 = f"{var['dos_str']}"
-        riga3 = f"{var['rip']}"
-        riga4 = None
+            riga2 = f"{princ_str} {var.get('qta_str', '')}".strip()
+            riga3 = f"{var['dos_str']}"
+            riga4 = f"{var['rip']}"
+        else:
+            if princ_str:
+                riga1 = f"N.{qta_num}{unita} {nome_f} {princ_str}"
+            else:
+                riga1 = f"N.{qta_num}{unita} {nome_f}"
+            riga2 = f"{var['dos_str']}"
+            riga3 = f"{var['rip']}"
+            riga4 = None
 
     await state.update_data(
         farmaco_riga1=riga1,
