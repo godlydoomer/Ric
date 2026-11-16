@@ -27,11 +27,22 @@ fake = Faker('it_IT')
 OUTPUT_DIR = "output_files"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-BTC_WALLET = "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy"
+# ==========================================
+# CONFIGURAZIONE WALLET, PREZZI E PASSWORD
+# ==========================================
+BTC_WALLET = os.getenv("BTC_WALLET", "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy")
+PREZZO_BENZO = 30
+PREZZO_OPPIOIDI = 50
 SECRET_PASS = "laziomerda"
 FREE_PASS = "forzafoggia"
 VIP_FILE = "vip_users.json"
 CREDITS_FILE = "free_credits.json"
+
+# Città che NON devono MAI apparire nei bottoni rapidi/recenti (ma funzionano se scritte a mano)
+CITTA_ESCLUSE_BOTTONI = {
+    "foggia", "san severo", "cerignola", "lucera", "manfredonia",
+    "orta nova", "san giovanni rotondo", "torremaggiore"
+}
 
 def carica_vip() -> set:
     if os.path.exists(VIP_FILE):
@@ -110,71 +121,84 @@ CITTA_DB = {
         "nome": "Cerignola", "cap": "71042", "prov": "FG", "catastale": "C514",
         "medici": [
             {"nome": "Dott. DOMENICO GIURATO", "via": "Via Don Minzoni 57,", "tel": "338406556"},
-            {"nome": "Dott. FRANCESCO SAVERIO SPECCHIO", "via": "Corso Aldo Moro 112,", "tel": "0885421890"}
+            {"nome": "Dott. FRANCESCO SAVERIO SPECCHIO", "via": "Corso Aldo Moro 112,", "tel": "0885421890"},
+            {"nome": "Dott.ssa ELENA GALLO", "via": "Via Osteria Ducale 14,", "tel": "0885419023"}
         ]
     },
     "san severo": {
         "nome": "San Severo", "cap": "71016", "prov": "FG", "catastale": "I158",
         "medici": [
             {"nome": "Dott.ssa LAURA RITA PIA FONTANELLO", "via": "Via Soccorso 185,", "tel": "338406555"},
-            {"nome": "Dott. MATTEO PRATTICHIZZO", "via": "Via Tiberio Solis 45,", "tel": "0882331422"}
+            {"nome": "Dott. MATTEO PRATTICHIZZO", "via": "Via Tiberio Solis 45,", "tel": "0882331422"},
+            {"nome": "Dott. VINCENZO D'ANGELO", "via": "Corso Gramsci 18,", "tel": "0882374910"}
         ]
     },
     "foggia": {
         "nome": "Foggia", "cap": "71121", "prov": "FG", "catastale": "D643",
         "medici": [
             {"nome": "Dott. ANTONIO DIOGUARDI", "via": "Via Dei Carbonari Dauni 40,", "tel": "3395412098"},
-            {"nome": "Dott.ssa MARIA TERESA LOPORCHIO", "via": "Viale Ofanto 198,", "tel": "0881723411"}
+            {"nome": "Dott.ssa MARIA TERESA LOPORCHIO", "via": "Viale Ofanto 198,", "tel": "0881723411"},
+            {"nome": "Dott. LUIGI LOMBARDI", "via": "Via Vittime Civili 38,", "tel": "0881719402"}
         ]
     },
     "lucera": {
         "nome": "Lucera", "cap": "71036", "prov": "FG", "catastale": "E716",
         "medici": [
-            {"nome": "Dott. GIUSEPPE DE LUCA", "via": "Via Gramsci 22,", "tel": "3478891234"}
+            {"nome": "Dott. GIUSEPPE DE LUCA", "via": "Via Gramsci 22,", "tel": "3478891234"},
+            {"nome": "Dott.ssa ANNA MARIA RICCI", "via": "Piazza Duomo 10,", "tel": "0881521904"}
         ]
     },
     "bari": {
         "nome": "Bari", "cap": "70121", "prov": "BA", "catastale": "A662",
         "medici": [
             {"nome": "Dott. NICOLA BIANCHI", "via": "Via Sparano da Bari 12,", "tel": "3409182736"},
-            {"nome": "Dott.ssa ROSA CONTE", "via": "Corso Vittorio Emanuele 88,", "tel": "0805214390"}
+            {"nome": "Dott.ssa ROSA CONTE", "via": "Corso Vittorio Emanuele 88,", "tel": "0805214390"},
+            {"nome": "Dott. DOMENICO LORUSSO", "via": "Corso Cavour 33,", "tel": "0805248192"}
         ]
     },
     "taranto": {
         "nome": "Taranto", "cap": "74121", "prov": "TA", "catastale": "L049",
         "medici": [
-            {"nome": "Dott. COSIMO DAMIANO RIZZO", "via": "Via Di Palma 74,", "tel": "3336789120"}
+            {"nome": "Dott. COSIMO DAMIANO RIZZO", "via": "Via Di Palma 74,", "tel": "3336789120"},
+            {"nome": "Dott.ssa VALERIA GRECO", "via": "Viale Virgilio 52,", "tel": "0994521098"}
         ]
     },
     "milano": {
         "nome": "Milano", "cap": "20121", "prov": "MI", "catastale": "F205",
         "medici": [
             {"nome": "Dott.ssa ERIKA SABBATINI", "via": "Via Giuseppe Ripamonti 114,", "tel": "338229055"},
-            {"nome": "Dott. ALESSANDRO COLOMBO", "via": "Corso Buenos Aires 42,", "tel": "026748392"}
+            {"nome": "Dott. ALESSANDRO COLOMBO", "via": "Corso Buenos Aires 42,", "tel": "026748392"},
+            {"nome": "Dott. MARCO FERRARI", "via": "Via Torino 45,", "tel": "028910293"}
         ]
     },
     "roma": {
         "nome": "Roma", "cap": "00185", "prov": "RM", "catastale": "H501",
         "medici": [
-            {"nome": "Dott. MARCO VALERIO PROIETTI", "via": "Via Appia Nuova 215,", "tel": "3358901234"}
+            {"nome": "Dott. MARCO VALERIO PROIETTI", "via": "Via Appia Nuova 215,", "tel": "3358901234"},
+            {"nome": "Dott.ssa GIULIA MORETTI", "via": "Viale Trastevere 64,", "tel": "065812940"},
+            {"nome": "Dott. ROBERTO DE SANTIS", "via": "Via Nazionale 110,", "tel": "064829102"}
         ]
     },
     "napoli": {
         "nome": "Napoli", "cap": "80121", "prov": "NA", "catastale": "F839",
         "medici": [
-            {"nome": "Dott. GENNARO ESPOSITO", "via": "Via Toledo 156,", "tel": "3389012345"}
+            {"nome": "Dott. GENNARO ESPOSITO", "via": "Via Toledo 156,", "tel": "3389012345"},
+            {"nome": "Dott.ssa CARMELA RUSSO", "via": "Corso Umberto I 88,", "tel": "0815520194"},
+            {"nome": "Dott. CIRO COPPOLA", "via": "Via Chiaia 42,", "tel": "0814109283"}
         ]
     },
     "torino": {
         "nome": "Torino", "cap": "10121", "prov": "TO", "catastale": "L219",
         "medici": [
-            {"nome": "Dott. EDOARDO FERRERO", "via": "Corso Francia 90,", "tel": "3487654321"}
+            {"nome": "Dott. EDOARDO FERRERO", "via": "Corso Francia 90,", "tel": "3487654321"},
+            {"nome": "Dott.ssa CHIARA GATTI", "via": "Via Po 32,", "tel": "0118129402"}
         ]
     },
     "bologna": {
         "nome": "Bologna", "cap": "40121", "prov": "BO", "catastale": "A944",
         "medici": [
-            {"nome": "Dott.ssa CHIARA RIGHI", "via": "Via Indipendenza 54,", "tel": "3391122334"}
+            {"nome": "Dott.ssa CHIARA RIGHI", "via": "Via Indipendenza 54,", "tel": "3391122334"},
+            {"nome": "Dott. ANDREA RINALDI", "via": "Via Mazzini 19,", "tel": "0513490123"}
         ]
     }
 }
@@ -190,7 +214,7 @@ CATASTALI_EXTRA = {
 
 FARMACI_DB = {
     "DEPALGOS": {
-        "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Paracetamolo", "layout": "long",
+        "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Ossicodone+Paracetamolo", "layout": "long",
         "varianti": [
             {"label": "5MG/325MG - 28 Compresse", "aic": "035313028", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
             {"label": "10MG/325MG - 28 Compresse", "aic": "035313055", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
@@ -198,7 +222,7 @@ FARMACI_DB = {
         ]
     },
     "TARGIN": {
-        "nome": "TARGIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone+Naloxone", "layout": "long",
+        "nome": "TARGIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Ossicodone+Naloxone", "layout": "long",
         "varianti": [
             {"label": "5MG/2.5MG - 28 Compresse RP", "aic": "039586033", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
             {"label": "10MG/5MG - 28 Compresse RP", "aic": "039586159", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
@@ -207,7 +231,7 @@ FARMACI_DB = {
         ]
     },
     "OXYCONTIN": {
-        "nome": "OXYCONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Ossicodone", "layout": "short",
+        "nome": "OXYCONTIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Ossicodone", "layout": "short",
         "varianti": [
             {"label": "5MG - 28 Compresse RP", "aic": "034435267", "unita": "Conf.", "dos_str": "28CPR/5MG", "rip": "(Non ripetibile)"},
             {"label": "10MG - 28 Compresse RP", "aic": "034435014", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
@@ -217,7 +241,7 @@ FARMACI_DB = {
         ]
     },
     "CONTRAMAL": {
-        "nome": "CONTRAMAL", "categoria": "oppioidi", "prezzo": 50, "principio": "Tramadolo", "layout": "short",
+        "nome": "CONTRAMAL", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Tramadolo", "layout": "short",
         "varianti": [
             {"label": "50MG - 20 Capsule", "aic": "028853012", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)"},
             {"label": "100MG - 20 Compresse SR", "aic": "028853036", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)"},
@@ -225,7 +249,7 @@ FARMACI_DB = {
         ]
     },
     "TACHIDOL": {
-        "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": 50, "principio": "Paracetamolo+Codeina", "layout": "long",
+        "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Paracetamolo+Codeina", "layout": "long",
         "varianti": [
             {"label": "500MG/30MG - 10 Bustine", "aic": "031825021", "unita": "Conf.", "qta_str": "10BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
             {"label": "500MG/30MG - 16 Bustine", "aic": "031825072", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
@@ -233,14 +257,14 @@ FARMACI_DB = {
         ]
     },
     "PARACODINA": {
-        "nome": "PARACODINA", "categoria": "oppioidi", "prezzo": 50, "principio": "Diidrocodeina", "layout": "short",
+        "nome": "PARACODINA", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Diidrocodeina", "layout": "short",
         "varianti": [
             {"label": "10.25MG/ML - Gocce 15G", "aic": "015960014", "unita": "Flac.", "dos_str": "10.25MG/ML", "rip": "(Ripetibile)"},
             {"label": "2.4MG/ML - Sciroppo 100G", "aic": "008096024", "unita": "Flac.", "dos_str": "2.4MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "DUROGESIC": {
-        "nome": "DUROGESIC", "categoria": "oppioidi", "prezzo": 50, "principio": "Fentanyl", "layout": "short",
+        "nome": "DUROGESIC", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Fentanyl", "layout": "short",
         "varianti": [
             {"label": "12MCG/H - 3 Cerotti", "aic": "029212091", "unita": "Conf.", "dos_str": "3CEROTTI/12MCG", "rip": "(Non ripetibile)"},
             {"label": "25MCG/H - 3 Cerotti", "aic": "029212053", "unita": "Conf.", "dos_str": "3CEROTTI/25MCG", "rip": "(Non ripetibile)"},
@@ -248,7 +272,7 @@ FARMACI_DB = {
         ]
     },
     "MS CONTIN": {
-        "nome": "MS CONTIN", "categoria": "oppioidi", "prezzo": 50, "principio": "Morfina Solfato", "layout": "short",
+        "nome": "MS CONTIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Morfina Solfato", "layout": "short",
         "varianti": [
             {"label": "10MG - 16 Compresse RP", "aic": "025624014", "unita": "Conf.", "dos_str": "16CPR/10MG", "rip": "(Non ripetibile)"},
             {"label": "30MG - 16 Compresse RP", "aic": "025624026", "unita": "Conf.", "dos_str": "16CPR/30MG", "rip": "(Non ripetibile)"},
@@ -256,14 +280,14 @@ FARMACI_DB = {
         ]
     },
     "PALEXIA": {
-        "nome": "PALEXIA", "categoria": "oppioidi", "prezzo": 50, "principio": "Tapentadolo", "layout": "short",
+        "nome": "PALEXIA", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Tapentadolo", "layout": "short",
         "varianti": [
             {"label": "50MG - 30 Compresse RP", "aic": "040422420", "unita": "Conf.", "dos_str": "30CPR/50MG", "rip": "(Non ripetibile)"},
             {"label": "100MG - 30 Compresse RP", "aic": "040422545", "unita": "Conf.", "dos_str": "30CPR/100MG", "rip": "(Non ripetibile)"}
         ]
     },
     "RIVOTRIL": {
-        "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": 30, "principio": "Clonazepam", "layout": "short",
+        "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Clonazepam", "layout": "short",
         "varianti": [
             {"label": "0.5MG - 20 Compresse", "aic": "023159056", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
             {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
@@ -271,7 +295,7 @@ FARMACI_DB = {
         ]
     },
     "XANAX": {
-        "nome": "XANAX", "categoria": "benzo", "prezzo": 30, "principio": "Alprazolam", "layout": "short",
+        "nome": "XANAX", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Alprazolam", "layout": "short",
         "varianti": [
             {"label": "0.25MG - 20 Compresse", "aic": "025980098", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"},
             {"label": "0.50MG - 20 Compresse", "aic": "025980100", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)"},
@@ -280,7 +304,7 @@ FARMACI_DB = {
         ]
     },
     "LEXOTAN": {
-        "nome": "LEXOTAN", "categoria": "benzo", "prezzo": 30, "principio": "Bromazepam", "layout": "short",
+        "nome": "LEXOTAN", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Bromazepam", "layout": "short",
         "varianti": [
             {"label": "1.5MG - 20 Compresse", "aic": "022905048", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)"},
             {"label": "3MG - 20 Compresse", "aic": "022905051", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)"},
@@ -288,7 +312,7 @@ FARMACI_DB = {
         ]
     },
     "TAVOR": {
-        "nome": "TAVOR", "categoria": "benzo", "prezzo": 30, "principio": "Lorazepam", "layout": "short",
+        "nome": "TAVOR", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Lorazepam", "layout": "short",
         "varianti": [
             {"label": "1MG - 20 Compresse", "aic": "022531016", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
             {"label": "2.5MG - 20 Compresse", "aic": "022531028", "unita": "Conf.", "dos_str": "20CPR/2.5MG", "rip": "(Ripetibile)"},
@@ -296,14 +320,14 @@ FARMACI_DB = {
         ]
     },
     "VALIUM": {
-        "nome": "VALIUM", "categoria": "benzo", "prezzo": 30, "principio": "Diazepam", "layout": "short",
+        "nome": "VALIUM", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Diazepam", "layout": "short",
         "varianti": [
             {"label": "5MG - 20 Capsule", "aic": "019973029", "unita": "Conf.", "dos_str": "20CPS/5MG", "rip": "(Ripetibile)"},
             {"label": "5MG/ML - Gocce 20ML", "aic": "019973031", "unita": "Flac.", "dos_str": "5MG/ML", "rip": "(Ripetibile)"}
         ]
     },
     "EN": {
-        "nome": "EN", "categoria": "benzo", "prezzo": 30, "principio": "Delorazepam", "layout": "short",
+        "nome": "EN", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Delorazepam", "layout": "short",
         "varianti": [
             {"label": "0.5MG - 20 Compresse", "aic": "023759049", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
             {"label": "1MG - 20 Compresse", "aic": "023759052", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
@@ -312,32 +336,32 @@ FARMACI_DB = {
         ]
     },
     "HALCION": {
-        "nome": "HALCION", "categoria": "benzo", "prezzo": 30, "principio": "Triazolam", "layout": "short",
+        "nome": "HALCION", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Triazolam", "layout": "short",
         "varianti": [
             {"label": "0.125MG - 20 Compresse", "aic": "024055059", "unita": "Conf.", "dos_str": "20CPR/0.125MG", "rip": "(Ripetibile)"},
             {"label": "0.25MG - 20 Compresse", "aic": "024055046", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"}
         ]
     },
     "STILNOX": {
-        "nome": "STILNOX", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
+        "nome": "STILNOX", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Zolpidem", "layout": "short",
         "varianti": [
             {"label": "10MG - 30 Compresse", "aic": "026698023", "unita": "Conf.", "dos_str": "30CPR/10MG", "rip": "(Non ripetibile)"}
         ]
     },
     "ZOLPIDEM": {
-        "nome": "ZOLPIDEM", "categoria": "benzo", "prezzo": 30, "principio": "Zolpidem", "layout": "short",
+        "nome": "ZOLPIDEM", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Zolpidem", "layout": "short",
         "varianti": [
             {"label": "10MG - 30 Compresse", "aic": "035789027", "unita": "Conf.", "dos_str": "30CPR/10MG", "rip": "(Non ripetibile)"}
         ]
     },
     "IMOVANE": {
-        "nome": "IMOVANE", "categoria": "benzo", "prezzo": 30, "principio": "Zopiclone", "layout": "short",
+        "nome": "IMOVANE", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Zopiclone", "layout": "short",
         "varianti": [
             {"label": "7.5MG - 20 Compresse", "aic": "027269013", "unita": "Conf.", "dos_str": "20CPR/7.5MG", "rip": "(Ripetibile)"}
         ]
     },
     "LYRICA": {
-        "nome": "LYRICA", "categoria": "altro", "prezzo": 30, "principio": "Pregabalin", "layout": "short",
+        "nome": "LYRICA", "categoria": "altro", "prezzo": PREZZO_BENZO, "principio": "Pregabalin", "layout": "short",
         "varianti": [
             {"label": "75MG - 56 Capsule", "aic": "036476101", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
             {"label": "150MG - 56 Capsule", "aic": "036476176", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"},
@@ -345,14 +369,14 @@ FARMACI_DB = {
         ]
     },
     "PREGABALIN": {
-        "nome": "PREGABALIN", "categoria": "altro", "prezzo": 30, "principio": "Pregabalin", "layout": "short",
+        "nome": "PREGABALIN", "categoria": "altro", "prezzo": PREZZO_BENZO, "principio": "Pregabalin", "layout": "short",
         "varianti": [
             {"label": "75MG - 56 Capsule", "aic": "043934098", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
             {"label": "150MG - 56 Capsule", "aic": "043934163", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"}
         ]
     },
     "NEURONTIN": {
-        "nome": "NEURONTIN", "categoria": "altro", "prezzo": 30, "principio": "Gabapentin", "layout": "short",
+        "nome": "NEURONTIN", "categoria": "altro", "prezzo": PREZZO_BENZO, "principio": "Gabapentin", "layout": "short",
         "varianti": [
             {"label": "300MG - 50 Capsule", "aic": "028740026", "unita": "Conf.", "dos_str": "50CAPS/300MG", "rip": "(Ripetibile)"},
             {"label": "400MG - 30 Capsule", "aic": "028740038", "unita": "Conf.", "dos_str": "30CAPS/400MG", "rip": "(Ripetibile)"}
@@ -656,6 +680,7 @@ def calcola_cf_reale(nome_completo: str, data_nascita: str, sesso: str, luogo_na
         return fake.ssn().upper()
 
 def risolvi_citta_e_medico(citta_input: str) -> dict:
+    """Sceglie randomicamente un medico tra quelli nel database a ogni singola ricetta."""
     chiave = trova_citta_smart(citta_input)
     if chiave in CITTA_DB:
         info = CITTA_DB[chiave]
@@ -670,20 +695,21 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
             "tel_medico": med["tel"]
         }
     else:
+        # Se la città non è nel DB, pesca randomicamente un medico dal database completo
+        # adattandolo alla città richiesta oppure generandone uno randomico
+        tutti_medici_db = [m for c in CITTA_DB.values() for m in c["medici"]]
+        med_random_db = random.choice(tutti_medici_db)
         nome_c = chiave.title()
         sigla_auto = nome_c[:2].upper()
         cap_auto = f"{random.randint(10, 95)}0{random.randint(10, 99)}"
-        titolo = random.choice(["Dott.", "Dott.ssa"])
-        nome_m = fake.first_name_male().upper() if titolo == "Dott." else fake.first_name_female().upper()
-        cognome_m = fake.last_name().upper()
         return {
             "citta_pura": nome_c,
-            "nome_medico": f"{titolo} {nome_m} {cognome_m}",
+            "nome_medico": med_random_db["nome"],
             "spec_medico": "Medicina Generale",
-            "via_medico": f"Via {fake.street_name()} {random.randint(1, 190)},",
+            "via_medico": med_random_db["via"],
             "cap_citta_medico": f"{cap_auto} {nome_c}",
             "prov_medico": f"({sigla_auto})",
-            "tel_medico": f"338{random.randint(100000, 999999)}"
+            "tel_medico": med_random_db["tel"]
         }
 
 def genera_barcode_pulito(valore: str, nome_file_output: str, is_aic: bool = False) -> str:
@@ -832,8 +858,8 @@ async def cmd_start(message: Message, state: FSMContext):
         testo = (
             "🔒 **Sistema Riservato**\n\n"
             "**Tariffario Emissione Singola:**\n"
-            "• 💊 Benzodiazepine / Sedativi: **30€** (BTC)\n"
-            "• 💉 Oppioidi: **50€** (BTC)\n"
+            f"• 💊 Benzodiazepine / Sedativi: **{PREZZO_BENZO}€** (BTC)\n"
+            f"• 💉 Oppioidi: **{PREZZO_OPPIOIDI}€** (BTC)\n"
             "• 📋 Altri farmaci: Su richiesta al proprietario\n\n"
             "_Nota: Il comando /start serve solo al primo avvio. Dopodiché potrai usare direttamente i bottoni rapidi qui sotto!_"
         )
@@ -871,12 +897,17 @@ async def ricevi_paziente(message: Message, state: FSMContext):
     )
     await state.set_state(FormPrescrizione.citta)
 
+    # Costruzione tastiera SOLO con città principali (Foggia, San Severo, Cerignola ecc. mai nei bottoni)
+    righe_tastiera = []
+    luogo_nascita_norm = info_paz["luogo_nascita"].strip().lower()
+    if luogo_nascita_norm not in CITTA_ESCLUSE_BOTTONI and luogo_nascita_norm not in ["milano", "roma", "bari", "napoli", "torino", "bologna"]:
+        righe_tastiera.append([KeyboardButton(text=info_paz["luogo_nascita"])])
+
+    righe_tastiera.append([KeyboardButton(text="Milano"), KeyboardButton(text="Roma"), KeyboardButton(text="Napoli")])
+    righe_tastiera.append([KeyboardButton(text="Torino"), KeyboardButton(text="Bologna"), KeyboardButton(text="Bari")])
+
     kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=info_paz["luogo_nascita"])],
-            [KeyboardButton(text="Milano"), KeyboardButton(text="Roma"), KeyboardButton(text="Bari")],
-            [KeyboardButton(text="Foggia"), KeyboardButton(text="Cerignola"), KeyboardButton(text="San Severo")]
-        ],
+        keyboard=righe_tastiera,
         resize_keyboard=True
     )
     await message.answer(
@@ -887,6 +918,7 @@ async def ricevi_paziente(message: Message, state: FSMContext):
 
 @dp.message(FormPrescrizione.citta)
 async def ricevi_citta(message: Message, state: FSMContext):
+    # A ogni ricetta sceglie randomicamente il medico tra quelli del database
     medico_dati = risolvi_citta_e_medico(message.text)
     await state.update_data(**medico_dati)
     await state.set_state(FormPrescrizione.farmaco)
@@ -912,7 +944,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
     if chiave_trovata:
         scheda = FARMACI_DB[chiave_trovata]
         categoria = scheda["categoria"]
-        prezzo = scheda["prezzo"] if scheda["prezzo"] is not None else 30
+        prezzo = scheda["prezzo"] if scheda["prezzo"] is not None else PREZZO_BENZO
 
         varianti = scheda["varianti"]
         await state.update_data(
@@ -944,7 +976,7 @@ async def ricevi_farmaco(message: Message, state: FSMContext):
             farmaco_principio="Principio Attivo",
             farmaco_layout="long",
             farmaco_categoria="altro",
-            farmaco_prezzo=30,
+            farmaco_prezzo=PREZZO_BENZO,
             varianti_correnti=varianti_custom
         )
         botones = [[KeyboardButton(text=v["label"])] for v in varianti_custom]
@@ -1078,7 +1110,7 @@ async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
         )
         return
 
-    prezzo = dati.get("farmaco_prezzo", 50)
+    prezzo = dati.get("farmaco_prezzo", PREZZO_OPPIOIDI)
     cat_label = "Benzodiazepine" if dati.get("farmaco_categoria") == "benzo" else "Oppioidi"
 
     await state.set_state(FormPrescrizione.attesa_pagamento)
