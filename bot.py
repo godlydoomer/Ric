@@ -18,36 +18,263 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
-bottoken = os.getenv("bottoken")
+# ==========================================
+# INIZIALIZZAZIONE E DIRECTORY
+# ==========================================
+BOT_TOKEN = os.getenv("bottoken")
+if not BOT_TOKEN:
+    raise ValueError("ERRORE: Variabile d'ambiente 'bottoken' mancante.")
 
-bot = Bot(token=bottoken)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 fake = Faker('it_IT')
 
 OUTPUT_DIR = "output_files"
+ASSETS_DIR = "assets_loghi"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(ASSETS_DIR, exist_ok=True)
 
 # ==========================================
-# CONFIGURAZIONE WALLET, PREZZI E PASSWORD
+# CONFIGURAZIONE GLOBALE, PREZZI E SICUREZZA
 # ==========================================
 BTC_WALLET = os.getenv("BTC_WALLET", "bc1qr3lkmmwyrenuz2f7menf55yu8kt0ckzxzye2sy")
 PREZZO_BENZO = 20
 PREZZO_OPPIOIDI = 40
 SECRET_PASS = "laziomerda"
 FREE_PASS = "forzafoggia"
+
 VIP_FILE = "vip_users.json"
 CREDITS_FILE = "free_credits.json"
 
-# Città che NON devono MAI apparire nei bottoni rapidi/recenti (ma funzionano se scritte a mano)
+# Città filtrate dai pulsanti rapidi (ma perfettamente funzionanti se digitate a mano)
 CITTA_ESCLUSE_BOTTONI = {
     "foggia", "san severo", "cerignola", "lucera", "manfredonia",
-    "orta nova", "san giovanni rotondo", "torremaggiore"
+    "orta nova", "san giovanni rotondo", "torremaggiore", "sannicandro garganico"
 }
 
+# ==========================================
+# DATABASE REGIONI (SSN DEMATERIALIZZATA)
+# ==========================================
+REGIONI_DB = {
+    "puglia": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE PUGLIA",
+        "asl_cod": "115",
+        "prefisso_nre": "160A2",
+        "logo": "logo_puglia.png"
+    },
+    "lombardia": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE LOMBARDIA",
+        "asl_cod": "301",
+        "prefisso_nre": "030A2",
+        "logo": "logo_lombardia.png"
+    },
+    "lazio": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE LAZIO",
+        "asl_cod": "201",
+        "prefisso_nre": "120A2",
+        "logo": "logo_lazio.png"
+    },
+    "campania": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE CAMPANIA",
+        "asl_cod": "104",
+        "prefisso_nre": "150A2",
+        "logo": "logo_campania.png"
+    },
+    "piemonte": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE PIEMONTE",
+        "asl_cod": "201",
+        "prefisso_nre": "010A2",
+        "logo": "logo_piemonte.png"
+    },
+    "emilia romagna": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE EMILIA-ROMAGNA",
+        "asl_cod": "102",
+        "prefisso_nre": "080A2",
+        "logo": "logo_emilia_romagna.png"
+    },
+    "veneto": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE DEL VENETO",
+        "asl_cod": "506",
+        "prefisso_nre": "050A2",
+        "logo": "logo_veneto.png"
+    },
+    "toscana": {
+        "header": "SERVIZIO SANITARIO NAZIONALE\nREGIONE TOSCANA",
+        "asl_cod": "201",
+        "prefisso_nre": "090A2",
+        "logo": "logo_toscana.png"
+    }
+}
+
+# ==========================================
+# DATABASE CITTA' E MEDICI REALISTICI
+# ==========================================
+CITTA_DB = {
+    "foggia": {
+        "nome": "Foggia", "cap": "71121", "prov": "FG", "catastale": "D643", "regione": "puglia",
+        "medici": [
+            {"nome": "D'AMATO GIOVANNI", "titolo": "Dott.", "via": "Via Vittorio De Miro D'Ajeta 7,", "tel": "0881745210", "cf": "DMTGNN74M05D643X"},
+            {"nome": "DIOGUARDI ANTONIO", "titolo": "Dott.", "via": "Via Dei Carbonari Dauni 40,", "tel": "3395412098", "cf": "DGRNTN68C12D643P"},
+            {"nome": "LOPORCHIO MARIA TERESA", "titolo": "Dott.ssa", "via": "Viale Ofanto 198,", "tel": "0881723411", "cf": "LPRMRT80A41D643K"}
+        ]
+    },
+    "san severo": {
+        "nome": "San Severo", "cap": "71016", "prov": "FG", "catastale": "I158", "regione": "puglia",
+        "medici": [
+            {"nome": "FONTANELLO LAURA RITA PIA", "titolo": "Dott.ssa", "via": "Via Soccorso 185,", "tel": "3384065551", "cf": "FNTLRT80A41I158Z"},
+            {"nome": "PRATTICHIZZO MATTEO", "titolo": "Dott.", "via": "Via Tiberio Solis 45,", "tel": "0882331422", "cf": "PRTMTT75A01I158W"}
+        ]
+    },
+    "cerignola": {
+        "nome": "Cerignola", "cap": "71042", "prov": "FG", "catastale": "C514", "regione": "puglia",
+        "medici": [
+            {"nome": "GIURATO DOMENICO", "titolo": "Dott.", "via": "Via Don Minzoni 57,", "tel": "3384065560", "cf": "GRTDMNC70A01C514X"},
+            {"nome": "SPECCHIO FRANCESCO SAVERIO", "titolo": "Dott.", "via": "Corso Aldo Moro 112,", "tel": "0885421890", "cf": "SPCFNC80A01C514Y"}
+        ]
+    },
+    "sannicandro garganico": {
+        "nome": "Sannicandro Garganico", "cap": "71015", "prov": "FG", "catastale": "I049", "regione": "puglia",
+        "medici": [
+            {"nome": "RIZZO COSIMO DAMIANO", "titolo": "Dott.", "via": "Via Di Palma 74,", "tel": "3336789120", "cf": "RZZCMD72E14I049L"}
+        ]
+    },
+    "bari": {
+        "nome": "Bari", "cap": "70121", "prov": "BA", "catastale": "A662", "regione": "puglia",
+        "medici": [
+            {"nome": "BIANCHI NICOLA", "titolo": "Dott.", "via": "Via Sparano da Bari 12,", "tel": "3409182736", "cf": "BNCNCL75A01A662W"},
+            {"nome": "DE SANTIS VALERIA", "titolo": "Dott.ssa", "via": "Corso Cavour 88,", "tel": "0805214399", "cf": "DSNVLR82H50A662Q"}
+        ]
+    },
+    "milano": {
+        "nome": "Milano", "cap": "20121", "prov": "MI", "catastale": "F205", "regione": "lombardia",
+        "medici": [
+            {"nome": "SABBATINI ERIKA", "titolo": "Dott.ssa", "via": "Via Giuseppe Ripamonti 114,", "tel": "3382290554", "cf": "SBBKRK80A41F205X"},
+            {"nome": "COLOMBO ALESSANDRO", "titolo": "Dott.", "via": "Corso Buenos Aires 42,", "tel": "0267483921", "cf": "CLMLSN75A01F205Y"}
+        ]
+    },
+    "roma": {
+        "nome": "Roma", "cap": "00185", "prov": "RM", "catastale": "H501", "regione": "lazio",
+        "medici": [
+            {"nome": "PROIETTI MARCO VALERIO", "titolo": "Dott.", "via": "Via Appia Nuova 215,", "tel": "3358901234", "cf": "PRTMCV78A01H501Z"},
+            {"nome": "MANCINI CLAUDIA", "titolo": "Dott.ssa", "via": "Viale Trastevere 108,", "tel": "065812390", "cf": "MNCCLD81D52H501V"}
+        ]
+    },
+    "napoli": {
+        "nome": "Napoli", "cap": "80121", "prov": "NA", "catastale": "F839", "regione": "campania",
+        "medici": [
+            {"nome": "ESPOSITO GENNARO", "titolo": "Dott.", "via": "Via Toledo 156,", "tel": "3389012345", "cf": "SPGGNR70A01F839W"},
+            {"nome": "COPPOLA CARMINE", "titolo": "Dott.", "via": "Corso Umberto I 45,", "tel": "0815543210", "cf": "CPPCMN69B15F839T"}
+        ]
+    },
+    "torino": {
+        "nome": "Torino", "cap": "10121", "prov": "TO", "catastale": "L219", "regione": "piemonte",
+        "medici": [
+            {"nome": "FERRERO EDOARDO", "titolo": "Dott.", "via": "Corso Francia 90,", "tel": "3487654321", "cf": "FRRDDR75A01L219K"}
+        ]
+    },
+    "bologna": {
+        "nome": "Bologna", "cap": "40121", "prov": "BO", "catastale": "A944", "regione": "emilia romagna",
+        "medici": [
+            {"nome": "RIGHI CHIARA", "titolo": "Dott.ssa", "via": "Via Indipendenza 54,", "tel": "3391122334", "cf": "RGHCHR82A41A944J"}
+        ]
+    },
+    "firenze": {
+        "nome": "Firenze", "cap": "50121", "prov": "FI", "catastale": "D612", "regione": "toscana",
+        "medici": [
+            {"nome": "ROSSI LORENZO", "titolo": "Dott.", "via": "Viale Giacomo Matteotti 18,", "tel": "0552345678", "cf": "RSSLRN74C10D612M"}
+        ]
+    },
+    "venezia": {
+        "nome": "Venezia", "cap": "30121", "prov": "VE", "catastale": "L736", "regione": "veneto",
+        "medici": [
+            {"nome": "TREVISAN ANDREA", "titolo": "Dott.", "via": "Corso del Popolo 110,", "tel": "0419876543", "cf": "TRVNDR77H12L736E"}
+        ]
+    }
+}
+
+CATASTALI_EXTRA = {
+    "brasile": "Z602", "romania": "Z129", "albania": "Z100", "marocco": "Z330",
+    "svizzera": "Z133", "germania": "Z112", "francia": "Z110", "spagna": "Z131",
+    "udine": "L483", "manduria": "E882", "francavilla fontana": "D761",
+    "lecce": "E506", "brindisi": "B180", "palermo": "G273", "genova": "D969",
+    "verona": "L781", "pescara": "G482", "barletta": "A669", "andria": "A285",
+    "trani": "L328", "manfredonia": "E885", "lucera": "E716", "orta nova": "G131",
+    "san giovanni rotondo": "H926", "torremaggiore": "L273"
+}
+
+# ==========================================
+# DATABASE COMPLETO FARMACI E VARIANTI
+# ==========================================
+FARMACI_DB = {
+    "RIVOTRIL": {
+        "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "CLONAZEPAM",
+        "varianti": [
+            {"label": "20CPR 2MG", "aic": "023159068", "ssn_str": "RIVOTRIL*20CPR 2MG", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "20CPR 0,5MG", "aic": "023159056", "ssn_str": "RIVOTRIL*20CPR 0,5MG", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "GOCCE 10ML 2,5MG/ML", "aic": "023159031", "ssn_str": "RIVOTRIL*OS GTT 10ML 2,5MG/ML", "rip": "(Ripetibile)", "is_rip": True}
+        ]
+    },
+    "XANAX": {
+        "nome": "XANAX", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "ALPRAZOLAM",
+        "varianti": [
+            {"label": "20CPR 1MG", "aic": "025980112", "ssn_str": "XANAX*20CPR 1MG", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "20CPR 0,50MG", "aic": "025980100", "ssn_str": "XANAX*20CPR 0,50MG", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "30CPR 2MG RP", "aic": "025980151", "ssn_str": "XANAX*30CPR 2MG RP", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "GOCCE 20ML 0,75MG/ML", "aic": "025980050", "ssn_str": "XANAX*OS GTT 20ML 0,75MG/ML", "rip": "(Ripetibile)", "is_rip": True}
+        ]
+    },
+    "TAVOR": {
+        "nome": "TAVOR", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "LORAZEPAM",
+        "varianti": [
+            {"label": "20CPR 2,5MG", "aic": "022531028", "ssn_str": "TAVOR*20CPR 2,5MG", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "20CPR 1MG", "aic": "022531016", "ssn_str": "TAVOR*20CPR 1MG", "rip": "(Ripetibile)", "is_rip": True}
+        ]
+    },
+    "STILNOX": {
+        "nome": "STILNOX", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "ZOLPIDEM TARTRATO",
+        "varianti": [
+            {"label": "30CPR/10MG", "aic": "026695020", "ssn_str": "STILNOX*30CPR RIV 10MG", "rip": "(Non ripetibile)", "is_rip": False}
+        ]
+    },
+    "TRITTICO": {
+        "nome": "TRITTICO", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "TRAZODONE CLORIDRATO",
+        "varianti": [
+            {"label": "20CPR DIV 150MG RP", "aic": "022323075", "ssn_str": "TRITTICO*20CPR DIV 150MG RP", "rip": "(Ripetibile)", "is_rip": True},
+            {"label": "30CPR DIV 75MG RP", "aic": "022323063", "ssn_str": "TRITTICO*30CPR DIV 75MG RP", "rip": "(Ripetibile)", "is_rip": True}
+        ]
+    },
+    "DEPALGOS": {
+        "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "OSSICODONE+PARACETAMOLO",
+        "varianti": [
+            {"label": "28CPR 5MG/325MG", "aic": "035313028", "ssn_str": "DEPALGOS*28CPR RIV 5MG+325MG", "rip": "(Non ripetibile)", "is_rip": False},
+            {"label": "28CPR 10MG/325MG", "aic": "035313042", "ssn_str": "DEPALGOS*28CPR RIV 10MG+325MG", "rip": "(Non ripetibile)", "is_rip": False},
+            {"label": "28CPR 20MG/325MG", "aic": "035313067", "ssn_str": "DEPALGOS*28CPR RIV 20MG+325MG", "rip": "(Non ripetibile)", "is_rip": False}
+        ]
+    },
+    "TARGIN": {
+        "nome": "TARGIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "OSSICODONE+NALOXONE",
+        "varianti": [
+            {"label": "28CPR 10MG/5MG RP", "aic": "039586159", "ssn_str": "TARGIN*28CPR 10MG+5MG RP", "rip": "(Non ripetibile)", "is_rip": False},
+            {"label": "28CPR 20MG/10MG RP", "aic": "039586274", "ssn_str": "TARGIN*28CPR 20MG+10MG RP", "rip": "(Non ripetibile)", "is_rip": False}
+        ]
+    },
+    "OXYCONTIN": {
+        "nome": "OXYCONTIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "OSSICODONE CLORIDRATO",
+        "varianti": [
+            {"label": "28CPR 10MG RP", "aic": "034435014", "ssn_str": "OXYCONTIN*28CPR 10MG RP", "rip": "(Non ripetibile)", "is_rip": False},
+            {"label": "28CPR 20MG RP", "aic": "034435026", "ssn_str": "OXYCONTIN*28CPR 20MG RP", "rip": "(Non ripetibile)", "is_rip": False},
+            {"label": "28CPR 40MG RP", "aic": "034435038", "ssn_str": "OXYCONTIN*28CPR 40MG RP", "rip": "(Non ripetibile)", "is_rip": False}
+        ]
+    }
+}
+
+# ==========================================
+# GESTIONE PERSISTENZA CREDITI E VIP
+# ==========================================
 def carica_vip() -> set:
     if os.path.exists(VIP_FILE):
         try:
-            with open(VIP_FILE, "r") as f:
+            with open(VIP_FILE, "r", encoding="utf-8") as f:
                 return set(json.load(f))
         except Exception:
             return set()
@@ -57,7 +284,7 @@ def salva_vip(user_id: int):
     vips = carica_vip()
     vips.add(user_id)
     try:
-        with open(VIP_FILE, "w") as f:
+        with open(VIP_FILE, "w", encoding="utf-8") as f:
             json.dump(list(vips), f)
     except Exception:
         pass
@@ -65,7 +292,7 @@ def salva_vip(user_id: int):
 def carica_crediti() -> dict:
     if os.path.exists(CREDITS_FILE):
         try:
-            with open(CREDITS_FILE, "r") as f:
+            with open(CREDITS_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
@@ -78,7 +305,7 @@ def scala_credito(user_id: int) -> bool:
     if current > 0:
         crediti[uid_str] = current - 1
         try:
-            with open(CREDITS_FILE, "w") as f:
+            with open(CREDITS_FILE, "w", encoding="utf-8") as f:
                 json.dump(crediti, f)
         except Exception:
             pass
@@ -90,352 +317,40 @@ def aggiungi_crediti_gratuiti(user_id: int, quantita: int = 3):
     uid_str = str(user_id)
     crediti[uid_str] = crediti.get(uid_str, 0) + quantita
     try:
-        with open(CREDITS_FILE, "w") as f:
+        with open(CREDITS_FILE, "w", encoding="utf-8") as f:
             json.dump(crediti, f)
     except Exception:
         pass
 
 VIP_USERS = carica_vip()
 
-def calcola_checksum_aic(aic_8_cifre: str) -> str:
-    pulito = "".join(c for c in str(aic_8_cifre) if c.isdigit()).zfill(8)[:8]
-    somma = 0
-    for idx, ch in enumerate(pulito):
-        cifra = int(ch)
-        if (idx + 1) % 2 == 0:
-            doppio = cifra * 2
-            somma += (doppio // 10) + (doppio % 10)
-        else:
-            somma += cifra
-    check_digit = somma % 10
-    return f"{pulito}{check_digit}"
-
-def valida_aic(aic_9_cifre: str) -> bool:
-    pulito = "".join(c for c in str(aic_9_cifre) if c.isdigit())
-    if len(pulito) != 9:
-        return False
-    return calcola_checksum_aic(pulito[:8]) == pulito
-
-CITTA_DB = {
-    "cerignola": {
-        "nome": "Cerignola", "cap": "71042", "prov": "FG", "catastale": "C514",
-        "medici": [
-            {"nome": "Dott. DOMENICO GIURATO", "via": "Via Don Minzoni 57,", "tel": "338406556"},
-            {"nome": "Dott. FRANCESCO SAVERIO SPECCHIO", "via": "Corso Aldo Moro 112,", "tel": "0885421890"},
-            {"nome": "Dott.ssa ELENA GALLO", "via": "Via Osteria Ducale 14,", "tel": "0885419023"}
-        ]
-    },
-    "san severo": {
-        "nome": "San Severo", "cap": "71016", "prov": "FG", "catastale": "I158",
-        "medici": [
-            {"nome": "Dott.ssa LAURA RITA PIA FONTANELLO", "via": "Via Soccorso 185,", "tel": "338406555"},
-            {"nome": "Dott. MATTEO PRATTICHIZZO", "via": "Via Tiberio Solis 45,", "tel": "0882331422"},
-            {"nome": "Dott. VINCENZO D'ANGELO", "via": "Corso Gramsci 18,", "tel": "0882374910"}
-        ]
-    },
-    "foggia": {
-        "nome": "Foggia", "cap": "71121", "prov": "FG", "catastale": "D643",
-        "medici": [
-            {"nome": "Dott. ANTONIO DIOGUARDI", "via": "Via Dei Carbonari Dauni 40,", "tel": "3395412098"},
-            {"nome": "Dott.ssa MARIA TERESA LOPORCHIO", "via": "Viale Ofanto 198,", "tel": "0881723411"},
-            {"nome": "Dott. LUIGI LOMBARDI", "via": "Via Vittime Civili 38,", "tel": "0881719402"}
-        ]
-    },
-    "lucera": {
-        "nome": "Lucera", "cap": "71036", "prov": "FG", "catastale": "E716",
-        "medici": [
-            {"nome": "Dott. GIUSEPPE DE LUCA", "via": "Via Gramsci 22,", "tel": "3478891234"},
-            {"nome": "Dott.ssa ANNA MARIA RICCI", "via": "Piazza Duomo 10,", "tel": "0881521904"}
-        ]
-    },
-    "bari": {
-        "nome": "Bari", "cap": "70121", "prov": "BA", "catastale": "A662",
-        "medici": [
-            {"nome": "Dott. NICOLA BIANCHI", "via": "Via Sparano da Bari 12,", "tel": "3409182736"},
-            {"nome": "Dott.ssa ROSA CONTE", "via": "Corso Vittorio Emanuele 88,", "tel": "0805214390"},
-            {"nome": "Dott. DOMENICO LORUSSO", "via": "Corso Cavour 33,", "tel": "0805248192"}
-        ]
-    },
-    "taranto": {
-        "nome": "Taranto", "cap": "74121", "prov": "TA", "catastale": "L049",
-        "medici": [
-            {"nome": "Dott. COSIMO DAMIANO RIZZO", "via": "Via Di Palma 74,", "tel": "3336789120"},
-            {"nome": "Dott.ssa VALERIA GRECO", "via": "Viale Virgilio 52,", "tel": "0994521098"}
-        ]
-    },
-    "milano": {
-        "nome": "Milano", "cap": "20121", "prov": "MI", "catastale": "F205",
-        "medici": [
-            {"nome": "Dott.ssa ERIKA SABBATINI", "via": "Via Giuseppe Ripamonti 114,", "tel": "338229055"},
-            {"nome": "Dott. ALESSANDRO COLOMBO", "via": "Corso Buenos Aires 42,", "tel": "026748392"},
-            {"nome": "Dott. MARCO FERRARI", "via": "Via Torino 45,", "tel": "028910293"}
-        ]
-    },
-    "roma": {
-        "nome": "Roma", "cap": "00185", "prov": "RM", "catastale": "H501",
-        "medici": [
-            {"nome": "Dott. MARCO VALERIO PROIETTI", "via": "Via Appia Nuova 215,", "tel": "3358901234"},
-            {"nome": "Dott.ssa GIULIA MORETTI", "via": "Viale Trastevere 64,", "tel": "065812940"},
-            {"nome": "Dott. ROBERTO DE SANTIS", "via": "Via Nazionale 110,", "tel": "064829102"}
-        ]
-    },
-    "napoli": {
-        "nome": "Napoli", "cap": "80121", "prov": "NA", "catastale": "F839",
-        "medici": [
-            {"nome": "Dott. GENNARO ESPOSITO", "via": "Via Toledo 156,", "tel": "3389012345"},
-            {"nome": "Dott.ssa CARMELA RUSSO", "via": "Corso Umberto I 88,", "tel": "0815520194"},
-            {"nome": "Dott. CIRO COPPOLA", "via": "Via Chiaia 42,", "tel": "0814109283"}
-        ]
-    },
-    "torino": {
-        "nome": "Torino", "cap": "10121", "prov": "TO", "catastale": "L219",
-        "medici": [
-            {"nome": "Dott. EDOARDO FERRERO", "via": "Corso Francia 90,", "tel": "3487654321"},
-            {"nome": "Dott.ssa CHIARA GATTI", "via": "Via Po 32,", "tel": "0118129402"}
-        ]
-    },
-    "bologna": {
-        "nome": "Bologna", "cap": "40121", "prov": "BO", "catastale": "A944",
-        "medici": [
-            {"nome": "Dott.ssa CHIARA RIGHI", "via": "Via Indipendenza 54,", "tel": "3391122334"},
-            {"nome": "Dott. ANDREA RINALDI", "via": "Via Mazzini 19,", "tel": "0513490123"}
-        ]
-    }
-}
-
-CATASTALI_EXTRA = {
-    "brasile": "Z602", "romania": "Z129", "albania": "Z100", "marocco": "Z330",
-    "svizzera": "Z133", "germania": "Z112", "francia": "Z110", "spagna": "Z131",
-    "udine": "L483", "manduria": "E882", "francavilla fontana": "D761",
-    "lecce": "E506", "brindisi": "B180", "firenze": "D612", "palermo": "G273",
-    "genova": "D969", "venezia": "L736", "verona": "L781", "pescara": "G482",
-    "barletta": "A669", "andria": "A285", "trani": "L328", "manfredonia": "E885"
-}
-
-FARMACI_DB = {
-    "DEPALGOS": {
-        "nome": "DEPALGOS", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Ossicodone+Paracetamolo", "layout": "long",
-        "varianti": [
-            {"label": "5MG/325MG - 28 Compresse", "aic": "035313028", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/325MG - 28 Compresse", "aic": "035313055", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/325MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/325MG - 28 Compresse", "aic": "035313081", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/325MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TARGIN": {
-        "nome": "TARGIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Ossicodone+Naloxone", "layout": "long",
-        "varianti": [
-            {"label": "5MG/2.5MG - 28 Compresse RP", "aic": "039586033", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "5MG/2.5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG/5MG - 28 Compresse RP", "aic": "039586159", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "10MG/5MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/10MG - 28 Compresse RP", "aic": "039586274", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "20MG/10MG", "rip": "(Non ripetibile)"},
-            {"label": "40MG/20MG - 28 Compresse RP", "aic": "039586375", "unita": "Conf.", "qta_str": "28CPR", "dos_str": "40MG/20MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "OXYCONTIN": {
-        "nome": "OXYCONTIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Ossicodone", "layout": "short",
-        "varianti": [
-            {"label": "5MG - 28 Compresse RP", "aic": "034435267", "unita": "Conf.", "dos_str": "28CPR/5MG", "rip": "(Non ripetibile)"},
-            {"label": "10MG - 28 Compresse RP", "aic": "034435014", "unita": "Conf.", "dos_str": "28CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG - 28 Compresse RP", "aic": "034435077", "unita": "Conf.", "dos_str": "28CPR/20MG", "rip": "(Non ripetibile)"},
-            {"label": "40MG - 28 Compresse RP", "aic": "034435139", "unita": "Conf.", "dos_str": "28CPR/40MG", "rip": "(Non ripetibile)"},
-            {"label": "80MG - 28 Compresse RP", "aic": "034435192", "unita": "Conf.", "dos_str": "28CPR/80MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "CONTRAMAL": {
-        "nome": "CONTRAMAL", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Tramadolo", "layout": "short",
-        "varianti": [
-            {"label": "50MG - 20 Capsule", "aic": "028853012", "unita": "Conf.", "dos_str": "20CPS/50MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG - 20 Compresse SR", "aic": "028853036", "unita": "Conf.", "dos_str": "20CPR/100MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG/ML - Gocce 10ML", "aic": "028853024", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TACHIDOL": {
-        "nome": "TACHIDOL", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Paracetamolo+Codeina", "layout": "long",
-        "varianti": [
-            {"label": "500MG/30MG - 10 Bustine", "aic": "031825021", "unita": "Conf.", "qta_str": "10BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
-            {"label": "500MG/30MG - 16 Bustine", "aic": "031825072", "unita": "Conf.", "qta_str": "16BUST", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"},
-            {"label": "500MG/30MG - 16 Compresse", "aic": "031825060", "unita": "Conf.", "qta_str": "16CPR", "dos_str": "500MG/30MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "PARACODINA": {
-        "nome": "PARACODINA", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Diidrocodeina", "layout": "short",
-        "varianti": [
-            {"label": "10.25MG/ML - Gocce 15G", "aic": "015960014", "unita": "Flac.", "dos_str": "10.25MG/ML", "rip": "(Ripetibile)"},
-            {"label": "2.4MG/ML - Sciroppo 100G", "aic": "008096024", "unita": "Flac.", "dos_str": "2.4MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "DUROGESIC": {
-        "nome": "DUROGESIC", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Fentanyl", "layout": "short",
-        "varianti": [
-            {"label": "12MCG/H - 3 Cerotti", "aic": "029212091", "unita": "Conf.", "dos_str": "3CEROTTI/12MCG", "rip": "(Non ripetibile)"},
-            {"label": "25MCG/H - 3 Cerotti", "aic": "029212053", "unita": "Conf.", "dos_str": "3CEROTTI/25MCG", "rip": "(Non ripetibile)"},
-            {"label": "50MCG/H - 3 Cerotti", "aic": "029212065", "unita": "Conf.", "dos_str": "3CEROTTI/50MCG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "MS CONTIN": {
-        "nome": "MS CONTIN", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Morfina Solfato", "layout": "short",
-        "varianti": [
-            {"label": "10MG - 16 Compresse RP", "aic": "025624014", "unita": "Conf.", "dos_str": "16CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "30MG - 16 Compresse RP", "aic": "025624026", "unita": "Conf.", "dos_str": "16CPR/30MG", "rip": "(Non ripetibile)"},
-            {"label": "60MG - 16 Compresse RP", "aic": "025624038", "unita": "Conf.", "dos_str": "16CPR/60MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "PALEXIA": {
-        "nome": "PALEXIA", "categoria": "oppioidi", "prezzo": PREZZO_OPPIOIDI, "principio": "Tapentadolo", "layout": "short",
-        "varianti": [
-            {"label": "50MG - 30 Compresse RP", "aic": "040422420", "unita": "Conf.", "dos_str": "30CPR/50MG", "rip": "(Non ripetibile)"},
-            {"label": "100MG - 30 Compresse RP", "aic": "040422545", "unita": "Conf.", "dos_str": "30CPR/100MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "RIVOTRIL": {
-        "nome": "RIVOTRIL", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Clonazepam", "layout": "short",
-        "varianti": [
-            {"label": "0.5MG - 20 Compresse", "aic": "023159056", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
-            {"label": "2MG - 20 Compresse", "aic": "023159068", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG/ML - Gocce 10ML", "aic": "023159031", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "XANAX": {
-        "nome": "XANAX", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Alprazolam", "layout": "short",
-        "varianti": [
-            {"label": "0.25MG - 20 Compresse", "aic": "025980098", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"},
-            {"label": "0.50MG - 20 Compresse", "aic": "025980100", "unita": "Conf.", "dos_str": "20CPR/0.50MG", "rip": "(Ripetibile)"},
-            {"label": "1MG - 20 Compresse", "aic": "025980112", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "0.75MG/ML - Gocce 20ML", "aic": "025980050", "unita": "Flac.", "dos_str": "0.75MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "LEXOTAN": {
-        "nome": "LEXOTAN", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Bromazepam", "layout": "short",
-        "varianti": [
-            {"label": "1.5MG - 20 Compresse", "aic": "022905048", "unita": "Conf.", "dos_str": "20CPR/1.5MG", "rip": "(Ripetibile)"},
-            {"label": "3MG - 20 Compresse", "aic": "022905051", "unita": "Conf.", "dos_str": "20CPR/3MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG/ML - Gocce 20ML", "aic": "022905036", "unita": "Flac.", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "TAVOR": {
-        "nome": "TAVOR", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Lorazepam", "layout": "short",
-        "varianti": [
-            {"label": "1MG - 20 Compresse", "aic": "022531016", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "2.5MG - 20 Compresse", "aic": "022531028", "unita": "Conf.", "dos_str": "20CPR/2.5MG", "rip": "(Ripetibile)"},
-            {"label": "2MG/ML - Gocce 10ML", "aic": "022531055", "unita": "Flac.", "dos_str": "2MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "VALIUM": {
-        "nome": "VALIUM", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Diazepam", "layout": "short",
-        "varianti": [
-            {"label": "5MG - 20 Capsule", "aic": "019973029", "unita": "Conf.", "dos_str": "20CPS/5MG", "rip": "(Ripetibile)"},
-            {"label": "5MG/ML - Gocce 20ML", "aic": "019973031", "unita": "Flac.", "dos_str": "5MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "EN": {
-        "nome": "EN", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Delorazepam", "layout": "short",
-        "varianti": [
-            {"label": "0.5MG - 20 Compresse", "aic": "023759049", "unita": "Conf.", "dos_str": "20CPR/0.5MG", "rip": "(Ripetibile)"},
-            {"label": "1MG - 20 Compresse", "aic": "023759052", "unita": "Conf.", "dos_str": "20CPR/1MG", "rip": "(Ripetibile)"},
-            {"label": "2MG - 20 Compresse", "aic": "023759064", "unita": "Conf.", "dos_str": "20CPR/2MG", "rip": "(Ripetibile)"},
-            {"label": "1MG/ML - Gocce 20ML", "aic": "023759076", "unita": "Flac.", "dos_str": "1MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "HALCION": {
-        "nome": "HALCION", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Triazolam", "layout": "short",
-        "varianti": [
-            {"label": "0.125MG - 20 Compresse", "aic": "024055059", "unita": "Conf.", "dos_str": "20CPR/0.125MG", "rip": "(Ripetibile)"},
-            {"label": "0.25MG - 20 Compresse", "aic": "024055046", "unita": "Conf.", "dos_str": "20CPR/0.25MG", "rip": "(Ripetibile)"}
-        ]
-    },
-    "STILNOX": {
-        "nome": "STILNOX", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Zolpidem", "layout": "short",
-        "varianti": [
-            {"label": "10MG - 30 Compresse", "aic": "026698023", "unita": "Conf.", "dos_str": "30CPR/10MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "ZOLPIDEM": {
-        "nome": "ZOLPIDEM", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Zolpidem", "layout": "short",
-        "varianti": [
-            {"label": "10MG - 30 Compresse", "aic": "035789027", "unita": "Conf.", "dos_str": "30CPR/10MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "IMOVANE": {
-        "nome": "IMOVANE", "categoria": "benzo", "prezzo": PREZZO_BENZO, "principio": "Zopiclone", "layout": "short",
-        "varianti": [
-            {"label": "7.5MG - 20 Compresse", "aic": "027269013", "unita": "Conf.", "dos_str": "20CPR/7.5MG", "rip": "(Ripetibile)"}
-        ]
-    },
-    "LYRICA": {
-        "nome": "LYRICA", "categoria": "altro", "prezzo": PREZZO_BENZO, "principio": "Pregabalin", "layout": "short",
-        "varianti": [
-            {"label": "75MG - 56 Capsule", "aic": "036476101", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
-            {"label": "150MG - 56 Capsule", "aic": "036476176", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"},
-            {"label": "300MG - 56 Capsule", "aic": "036476253", "unita": "Conf.", "dos_str": "56CAPS/300MG", "rip": "(Ripetibile)"}
-        ]
-    },
-    "PREGABALIN": {
-        "nome": "PREGABALIN", "categoria": "altro", "prezzo": PREZZO_BENZO, "principio": "Pregabalin", "layout": "short",
-        "varianti": [
-            {"label": "75MG - 56 Capsule", "aic": "043934098", "unita": "Conf.", "dos_str": "56CAPS/75MG", "rip": "(Ripetibile)"},
-            {"label": "150MG - 56 Capsule", "aic": "043934163", "unita": "Conf.", "dos_str": "56CAPS/150MG", "rip": "(Ripetibile)"}
-        ]
-    },
-    "NEURONTIN": {
-        "nome": "NEURONTIN", "categoria": "altro", "prezzo": PREZZO_BENZO, "principio": "Gabapentin", "layout": "short",
-        "varianti": [
-            {"label": "300MG - 50 Capsule", "aic": "028740026", "unita": "Conf.", "dos_str": "50CAPS/300MG", "rip": "(Ripetibile)"},
-            {"label": "400MG - 30 Capsule", "aic": "028740038", "unita": "Conf.", "dos_str": "30CAPS/400MG", "rip": "(Ripetibile)"}
-        ]
-    },
-    "OKI": {
-        "nome": "OKI", "categoria": "altro", "prezzo": None, "principio": "Ketoprofene", "layout": "short",
-        "varianti": [
-            {"label": "80MG - 30 Bustine", "aic": "028511086", "unita": "Conf.", "dos_str": "30BUST/80MG", "rip": "(Non ripetibile)"},
-            {"label": "80MG/ML - Gocce 30ML", "aic": "028511098", "unita": "Flac.", "dos_str": "80MG/ML", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TORADOL": {
-        "nome": "TORADOL", "categoria": "altro", "prezzo": None, "principio": "Ketorolac", "layout": "short",
-        "varianti": [
-            {"label": "10MG - 10 Compresse", "aic": "027253019", "unita": "Conf.", "dos_str": "10CPR/10MG", "rip": "(Non ripetibile)"},
-            {"label": "20MG/ML - Gocce 10ML", "aic": "027253045", "unita": "Flac.", "dos_str": "20MG/ML", "rip": "(Non ripetibile)"},
-            {"label": "30MG/ML - 3 Fiale Iniett.", "aic": "027253021", "unita": "Conf.", "dos_str": "3FIALE/30MG", "rip": "(Non ripetibile)"}
-        ]
-    },
-    "TACHIPIRINA": {
-        "nome": "TACHIPIRINA", "categoria": "altro", "prezzo": None, "principio": "Paracetamolo", "layout": "short",
-        "varianti": [
-            {"label": "1000MG - 16 Compresse", "aic": "012745096", "unita": "Conf.", "dos_str": "16CPR/1000MG", "rip": "(Ripetibile)"},
-            {"label": "500MG - 30 Compresse", "aic": "012745235", "unita": "Conf.", "dos_str": "30CPR/500MG", "rip": "(Ripetibile)"},
-            {"label": "100MG/ML - Gocce 30ML", "aic": "012745033", "unita": "Flac.", "dos_str": "100MG/ML", "rip": "(Ripetibile)"}
-        ]
-    },
-    "BRUFEN": {
-        "nome": "BRUFEN", "categoria": "altro", "prezzo": None, "principio": "Ibuprofene", "layout": "short",
-        "varianti": [
-            {"label": "600MG - 30 Compresse", "aic": "022593120", "unita": "Conf.", "dos_str": "30CPR/600MG", "rip": "(Ripetibile)"},
-            {"label": "800MG - 20 Compresse", "aic": "022593219", "unita": "Conf.", "dos_str": "20CPR/800MG", "rip": "(Ripetibile)"}
-        ]
-    }
-}
-
+# ==========================================
+# MOTORE CALCOLO CODICE FISCALE REALE E PARSING
+# ==========================================
 LEET_MAP = str.maketrans({
     '4': 'A', '0': 'O', '1': 'I', '3': 'E', '5': 'S', '7': 'T', '8': 'B', '6': 'G', '9': 'G', '2': 'Z'
 })
 
-NOMI_COMUNI = [
-    "MARIO", "LUIGI", "GIOVANNI", "GIUSEPPE", "ANTONIO", "FRANCESCO", "MARCO", "LUCA",
-    "ANDREA", "ALESSANDRO", "MATTEO", "LORENZO", "DAVIDE", "SIMONE", "FEDERICO", "RICCARDO",
-    "DANIELE", "GABRIELE", "STEFANO", "NICOLA", "CHRISTIAN", "DOMENICO", "VINCENZO", "PIETRO",
-    "SALVATORE", "CARLO", "TOMMASO", "FILIPPO", "ALESSIO", "EMANUELE", "MICHELE", "PAOLO",
-    "ROBERTO", "MASSIMO", "CLAUDIO", "FABIO", "GIORGIO", "ENRICO", "SERGIO", "MAURIZIO",
-    "MARIA", "ANNA", "GIULIA", "FRANCESCA", "SARA", "LAURA", "CHIARA", "MARTINA", "ALESSIA",
-    "VALENTINA", "FEDERICA", "ELISA", "ILARIA", "ELENA", "GIORGIA", "SILVIA", "PAOLA",
-    "ROBERTA", "DANIELA", "MONICA", "SONIA", "VERONICA", "BEATRICE", "SOFIA", "AURORA",
-    "ALICE", "GRETA", "VITTORIA", "CAMILLA", "CATERINA", "LUCIA", "ANTONELLA", "TERESA",
-    "ROSA", "ANGELA", "GIOVANNA", "CARMELA", "RITA", "ERIKA", "CESARE"
-]
+MESI_CF = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'H', 7: 'L', 8: 'M', 9: 'P', 10: 'R', 11: 'S', 12: 'T'}
 
-MESI_TESTUALI = {
-    "gennaio": 1, "gen": 1, "febbraio": 2, "feb": 2, "marzo": 3, "mar": 3,
-    "aprile": 4, "apr": 4, "maggio": 5, "mag": 5, "giugno": 6, "giu": 6,
-    "luglio": 7, "lug": 7, "agosto": 8, "ago": 8, "settembre": 9, "set": 9,
-    "ottobre": 10, "ott": 10, "novembre": 11, "nov": 11, "dicembre": 12, "dic": 12
+ODD_MAP = {
+    '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
+    'A': 1, 'B': 0, 'C': 5, 'D': 7, 'E': 9, 'F': 13, 'G': 15, 'H': 17, 'I': 19, 'J': 21,
+    'K': 2, 'L': 4, 'M': 18, 'N': 20, 'O': 11, 'P': 3, 'Q': 6, 'R': 8, 'S': 12, 'T': 14,
+    'U': 16, 'V': 10, 'W': 22, 'X': 25, 'Y': 24, 'Z': 23
+}
+
+EVEN_MAP = {
+    '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'J': 9,
+    'K': 10, 'L': 11, 'M': 12, 'N': 13, 'O': 14, 'P': 15, 'Q': 16, 'R': 17, 'S': 18, 'T': 19,
+    'U': 20, 'V': 21, 'W': 22, 'X': 23, 'Y': 24, 'Z': 25
+}
+
+NOMI_FEMMINILI = {
+    "MARIA", "ANNA", "GIULIA", "FRANCESCA", "SARA", "LAURA", "CHIARA", "MARTINA",
+    "VALENTINA", "ALESSIA", "FEDERICA", "ELENA", "SOFIA", "ROBERTA", "GIOVANNA",
+    "PAOLA", "DANIELA", "MONICA", "SILVIA", "BEATRICE", "GIORGIA", "ELISA", "LUCILEIDE"
 }
 
 def de_leet_parola(parola: str) -> str:
@@ -446,24 +361,41 @@ def de_leet_parola(parola: str) -> str:
         return pulita
     return pulita.upper().translate(LEET_MAP)
 
-def separa_nome_attaccato(parola_unica: str) -> str:
-    camel_split = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', parola_unica)
-    if " " in camel_split:
-        parti = [de_leet_parola(p) for p in camel_split.split()]
-        return " ".join(parti)
+def estrai_cons_voc(testo: str):
+    t = re.sub(r'[^A-Z]', '', testo.upper())
+    cons = [c for c in t if c not in "AEIOU"]
+    voc = [c for c in t if c in "AEIOU"]
+    return cons, voc
 
-    up = de_leet_parola(parola_unica)
-    for n in sorted(NOMI_COMUNI, key=len, reverse=True):
-        n_clean = n.strip()
-        if up.startswith(n_clean) and len(up) > len(n_clean) + 2:
-            return f"{n_clean} {up[len(n_clean):]}"
-        if up.endswith(n_clean) and len(up) > len(n_clean) + 2:
-            return f"{up[:-len(n_clean)]} {n_clean}"
+def codifica_cognome(cognome: str) -> str:
+    cons, voc = estrai_cons_voc(cognome)
+    lettere = cons + voc + ['X', 'X', 'X']
+    return "".join(lettere[:3])
 
-    if len(up) >= 10:
-        meta = len(up) // 2
-        return f"{up[:meta]} {up[meta:]}"
-    return up
+def codifica_nome(nome: str) -> str:
+    cons, voc = estrai_cons_voc(nome)
+    if len(cons) >= 4:
+        scelte = [cons[0], cons[2], cons[3]]
+    else:
+        scelte = (cons + voc + ['X', 'X', 'X'])[:3]
+    return "".join(scelte)
+
+def calcola_cf_reale(cognome: str, nome: str, gg: int, mm: int, aaaa: int, sesso: str, catastale: str) -> str:
+    c_cod = codifica_cognome(cognome)
+    n_cod = codifica_nome(nome)
+    aa_cod = f"{aaaa % 100:02d}"
+    m_cod = MESI_CF.get(mm, 'A')
+    g_cod = f"{gg + 40 if sesso.upper() == 'F' else gg:02d}"
+    parziale = f"{c_cod}{n_cod}{aa_cod}{m_cod}{g_cod}{catastale.upper()}"
+    
+    somma = 0
+    for idx, ch in enumerate(parziale[:15]):
+        if (idx + 1) % 2 == 1:
+            somma += ODD_MAP.get(ch, 0)
+        else:
+            somma += EVEN_MAP.get(ch, 0)
+    check_char = chr(ord('A') + (somma % 26))
+    return f"{parziale[:15]}{check_char}"
 
 def normalizza_anno(aa_str: str) -> int:
     aa = int(aa_str)
@@ -473,367 +405,301 @@ def normalizza_anno(aa_str: str) -> int:
 
 def analizza_input_paziente_smart(testo_raw: str) -> dict:
     testo = testo_raw.strip()
-    data_formattata = "15/04/1990"
+    gg, mm, aaaa = 24, 3, 1995
     testo_senza_data = testo
 
-    pattern_mese_txt = r'\b(\d{1,2})\s+(' + '|'.join(MESI_TESTUALI.keys()) + r')\s+(\d{2,4})\b'
-    m_txt = re.search(pattern_mese_txt, testo, flags=re.IGNORECASE)
-    if m_txt:
-        gg = int(m_txt.group(1))
-        mm = MESI_TESTUALI[m_txt.group(2).lower()]
-        aaaa = normalizza_anno(m_txt.group(3))
-        data_formattata = f"{gg:02d}/{mm:02d}/{aaaa}"
-        testo_senza_data = testo[:m_txt.start()] + " " + testo[m_txt.end():]
+    pattern_num = r'(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})'
+    m_num = re.search(pattern_num, testo)
+    if m_num:
+        gg = max(1, min(31, int(m_num.group(1))))
+        mm = max(1, min(12, int(m_num.group(2))))
+        aaaa = normalizza_anno(m_num.group(3))
+        testo_senza_data = testo[:m_num.start()] + " " + testo[m_num.end():]
+
+    luogo_trovato = "foggia"
+    catastale = "D643"
+    tutte_localita = {**{k: v["catastale"] for k, v in CITTA_DB.items()}, **CATASTALI_EXTRA}
+    
+    for loc, cat in sorted(tutte_localita.items(), key=lambda x: len(x[0]), reverse=True):
+        if re.search(rf'{re.escape(loc)}', testo_senza_data.lower()):
+            luogo_trovato = loc
+            catastale = cat
+            testo_senza_data = re.sub(rf'{re.escape(loc)}', ' ', testo_senza_data, flags=re.IGNORECASE)
+            break
+
+    testo_pulito = re.sub(r'(nato|nata|nat|il|del|a|in|da|di)', ' ', testo_senza_data, flags=re.IGNORECASE)
+    tokens_raw = [de_leet_parola(t) for t in testo_pulito.split() if t.strip() and not t.isdigit()]
+    tokens_raw = [t for t in tokens_raw if t]
+
+    if len(tokens_raw) >= 2:
+        cognome = tokens_raw[0]
+        nome = " ".join(tokens_raw[1:])
+        nome_completo = f"{cognome} {nome}"
+    elif len(tokens_raw) == 1:
+        cognome = tokens_raw[0]
+        nome = "MARIO"
+        nome_completo = f"{cognome} {nome}"
     else:
-        pattern_num = r'\b(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})\b'
-        m_num = re.search(pattern_num, testo)
-        if m_num:
-            gg = max(1, min(31, int(m_num.group(1))))
-            mm = max(1, min(12, int(m_num.group(2))))
-            aaaa = normalizza_anno(m_num.group(3))
-            data_formattata = f"{gg:02d}/{mm:02d}/{aaaa}"
-            testo_senza_data = testo[:m_num.start()] + " " + testo[m_num.end():]
-        else:
-            m_att = re.search(r'\b(\d{2})(\d{2})(\d{2,4})\b', testo)
-            if m_att:
-                gg = max(1, min(31, int(m_att.group(1))))
-                mm = max(1, min(12, int(m_att.group(2))))
-                aaaa = normalizza_anno(m_att.group(3))
-                data_formattata = f"{gg:02d}/{mm:02d}/{aaaa}"
-                testo_senza_data = testo[:m_att.start()] + " " + testo[m_att.end():]
+        cognome = "ROSSI"
+        nome = "MARIO"
+        nome_completo = "ROSSI MARIO"
 
-    sesso = None
-    m_sesso = re.search(r'\b(maschio|uomo|femmina|donna|m|f)\b', testo_senza_data, flags=re.IGNORECASE)
-    if m_sesso:
-        val_s = m_sesso.group(1).upper()
-        if val_s in ["F", "FEMMINA", "DONNA"]:
-            sesso = "F"
-            testo_senza_data = testo_senza_data[:m_sesso.start()] + " " + testo_senza_data[m_sesso.end():]
-        elif val_s in ["M", "MASCHIO", "UOMO"]:
-            if len(val_s) > 1 or m_sesso.start() > len(testo_senza_data) - 4:
-                sesso = "M"
-                testo_senza_data = testo_senza_data[:m_sesso.start()] + " " + testo_senza_data[m_sesso.end():]
-
-    luogo_trovato = None
-    tutte_localita = list(CITTA_DB.keys()) + list(CATASTALI_EXTRA.keys())
-
-    m_nato = re.search(r'\bnat[oa]?\s+(?:a|in)\s+([a-zA-Z0-9\s]{3,20})', testo_senza_data, flags=re.IGNORECASE)
-    if m_nato:
-        if "nata" in m_nato.group(0).lower() and not sesso:
-            sesso = "F"
-        cand_luogo = m_nato.group(1).strip()
-        parole_cand = cand_luogo.split()
-        for num_p in [2, 1]:
-            if len(parole_cand) >= num_p:
-                test_l = " ".join(de_leet_parola(w) for w in parole_cand[:num_p]).lower()
-                match_c = difflib.get_close_matches(test_l, tutte_localita, n=1, cutoff=0.75)
-                if match_c:
-                    luogo_trovato = match_c[0]
-                    break
-        if not luogo_trovato and parole_cand:
-            luogo_trovato = de_leet_parola(parole_cand[0]).lower()
-
-    testo_pulito = re.sub(r'\b(nato|nata|nat|il|del|a|in|da|di)\b', ' ', testo_senza_data, flags=re.IGNORECASE)
-    testo_pulito = re.sub(r'[|,\-/]', ' ', testo_pulito)
-
-    tokens_raw = [t for t in testo_pulito.split() if t.strip()]
-    tokens_deleet = [de_leet_parola(t) for t in tokens_raw if de_leet_parola(t)]
-
-    tokens_nome = []
-    idx = 0
-    while idx < len(tokens_deleet):
-        if idx + 1 < len(tokens_deleet):
-            due_p = f"{tokens_deleet[idx]} {tokens_deleet[idx+1]}".lower()
-            match_2 = difflib.get_close_matches(due_p, tutte_localita, n=1, cutoff=0.8)
-            if match_2:
-                luogo_trovato = match_2[0]
-                idx += 2
-                continue
-        una_p = tokens_deleet[idx].lower()
-        match_1 = difflib.get_close_matches(una_p, tutte_localita, n=1, cutoff=0.82)
-        if match_1 and len(tokens_deleet) > 1:
-            luogo_trovato = match_1[0]
-            idx += 1
-            continue
-        tokens_nome.append(tokens_raw[idx])
-        idx += 1
-
-    if not luogo_trovato:
-        luogo_trovato = "milano"
-
-    if not tokens_nome:
-        nome_finale = "MARIO ROSSI"
-    elif len(tokens_nome) == 1:
-        nome_finale = separa_nome_attaccato(tokens_nome[0])
-    else:
-        parti_corr = [de_leet_parola(t) for t in tokens_nome if de_leet_parola(t)]
-        parti_corr = [p for p in parti_corr if not p.isdigit()]
-        if len(parti_corr) == 1:
-            nome_finale = separa_nome_attaccato(parti_corr[0])
-        elif len(parti_corr) >= 2:
-            nome_finale = " ".join(parti_corr)
-        else:
-            nome_finale = "MARIO ROSSI"
-
-    if not sesso:
-        primo_nome = nome_finale.split()[0].upper()
-        if primo_nome.endswith("A") and primo_nome not in ["LUCA", "ANDREA", "NICOLA", "MATTIA", "ELIA", "TOBIA"]:
-            sesso = "F"
-        else:
-            sesso = "M"
-
-    cf_calcolato = calcola_cf_reale(nome_finale, data_formattata, sesso, luogo_trovato)
+    primo_nome = nome.split()[0] if nome else "MARIO"
+    sesso = "F" if primo_nome in NOMI_FEMMINILI or cognome in NOMI_FEMMINILI else "M"
+    cf_reale = calcola_cf_reale(cognome, nome, gg, mm, aaaa, sesso, catastale)
 
     return {
-        "nome_assistito": nome_finale,
+        "nome_assistito": nome_completo,
         "luogo_nascita": luogo_trovato.title(),
-        "cf_assistito": cf_calcolato
+        "cf_assistito": cf_reale,
+        "indirizzo_assistito": f"{fake.street_address().upper()}"
     }
 
 def trova_citta_smart(input_utente: str) -> str:
-    pulito = " ".join(de_leet_parola(w) for w in input_utente.split()).lower()
-    if not pulito:
-        return "milano"
-    for k in CITTA_DB:
-        if pulito == k or pulito == k.replace(" ", ""):
-            return k
-    matches = difflib.get_close_matches(pulito, list(CITTA_DB.keys()), n=1, cutoff=0.65)
-    if matches:
-        return matches[0]
-    return pulito
-
-def trova_farmaco_smart(input_utente: str):
-    primo_token = input_utente.strip().split()[0] if input_utente.strip() else ""
-    pulito = de_leet_parola(primo_token)
-    for k in FARMACI_DB:
-        if k in pulito or pulito in k:
-            return k
-    matches = difflib.get_close_matches(pulito, list(FARMACI_DB.keys()), n=1, cutoff=0.6)
-    if matches:
-        return matches[0]
-    return None
-
-MESI_CF = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'H', 7: 'L', 8: 'M', 9: 'P', 10: 'R', 11: 'S', 12: 'T'}
-ODD_MAP = {
-    '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
-    'A': 1, 'B': 0, 'C': 5, 'D': 7, 'E': 9, 'F': 13, 'G': 15, 'H': 17, 'I': 19, 'J': 21,
-    'K': 2, 'L': 4, 'M': 18, 'N': 20, 'O': 11, 'P': 3, 'Q': 6, 'R': 8, 'S': 12, 'T': 14,
-    'U': 16, 'V': 10, 'W': 22, 'X': 25, 'Y': 24, 'Z': 23
-}
-EVEN_MAP = {str(i): i for i in range(10)}
-EVEN_MAP.update({chr(65 + i): i for i in range(26)})
-
-def estrai_tre_lettere(testo: str, is_nome: bool = False) -> str:
-    pulito = "".join(c for c in testo.upper() if c.isalpha())
-    cons = [c for c in pulito if c not in "AEIOU"]
-    vocs = [c for c in pulito if c in "AEIOU"]
-    if is_nome and len(cons) >= 4:
-        scelte = [cons[0], cons[2], cons[3]]
-    else:
-        scelte = (cons + vocs + ['X', 'X', 'X'])[:3]
-    return "".join(scelte)
-
-def trova_codice_catastale(luogo: str) -> str:
-    l_clean = luogo.strip().lower()
-    if l_clean in CITTA_DB:
-        return CITTA_DB[l_clean]["catastale"]
-    if l_clean in CATASTALI_EXTRA:
-        return CATASTALI_EXTRA[l_clean]
-    tutte = list(CITTA_DB.keys()) + list(CATASTALI_EXTRA.keys())
-    m = difflib.get_close_matches(l_clean, tutte, n=1, cutoff=0.65)
-    if m:
-        k = m[0]
-        return CITTA_DB[k]["catastale"] if k in CITTA_DB else CATASTALI_EXTRA[k]
-    return "F205"
-
-def calcola_cf_reale(nome_completo: str, data_nascita: str, sesso: str, luogo_nascita: str) -> str:
-    try:
-        parti = nome_completo.strip().split()
-        if len(parti) >= 2:
-            nome = parti[0]
-            cognome = " ".join(parti[1:])
-        else:
-            nome = parti[0]
-            cognome = "ROSSI"
-
-        c_code = estrai_tre_lettere(cognome, is_nome=False)
-        n_code = estrai_tre_lettere(nome, is_nome=True)
-
-        dt = datetime.strptime(data_nascita.strip(), "%d/%m/%Y")
-        aa = str(dt.year)[-2:]
-        mm = MESI_CF[dt.month]
-        gg = dt.day + (40 if sesso.strip().upper().startswith("F") else 0)
-        gg_str = f"{gg:02d}"
-
-        catastale = trova_codice_catastale(luogo_nascita)
-        parziale = f"{c_code}{n_code}{aa}{mm}{gg_str}{catastale}"
-
-        somma = 0
-        for idx, ch in enumerate(parziale):
-            if (idx + 1) % 2 == 1:
-                somma += ODD_MAP[ch]
-            else:
-                somma += EVEN_MAP[ch]
-        check_char = chr(65 + (somma % 26))
-        return parziale + check_char
-    except Exception:
-        return fake.ssn().upper()
+    pulito = input_utente.strip().lower()
+    if pulito in CITTA_DB:
+        return pulito
+    matches = difflib.get_close_matches(pulito, list(CITTA_DB.keys()), n=1, cutoff=0.6)
+    return matches[0] if matches else "foggia"
 
 def risolvi_citta_e_medico(citta_input: str) -> dict:
-    """Sceglie randomicamente un medico tra quelli nel database a ogni singola ricetta."""
     chiave = trova_citta_smart(citta_input)
-    if chiave in CITTA_DB:
-        info = CITTA_DB[chiave]
-        med = random.choice(info["medici"])
-        return {
-            "citta_pura": info["nome"],
-            "nome_medico": med["nome"],
-            "spec_medico": "Medicina Generale",
-            "via_medico": med["via"],
-            "cap_citta_medico": f"{info['cap']} {info['nome']}",
-            "prov_medico": f"({info['prov']})",
-            "tel_medico": med["tel"]
-        }
-    else:
-        tutti_medici_db = [m for c in CITTA_DB.values() for m in c["medici"]]
-        med_random_db = random.choice(tutti_medici_db)
-        nome_c = chiave.title()
-        sigla_auto = nome_c[:2].upper()
-        cap_auto = f"{random.randint(10, 95)}0{random.randint(10, 99)}"
-        return {
-            "citta_pura": nome_c,
-            "nome_medico": med_random_db["nome"],
-            "spec_medico": "Medicina Generale",
-            "via_medico": med_random_db["via"],
-            "cap_citta_medico": f"{cap_auto} {nome_c}",
-            "prov_medico": f"({sigla_auto})",
-            "tel_medico": med_random_db["tel"]
-        }
+    info = CITTA_DB[chiave]
+    med = random.choice(info["medici"])
+    reg_key = info["regione"]
+    reg_info = REGIONI_DB[reg_key]
 
-def genera_barcode_pulito(valore: str, nome_file_output: str, is_aic: bool = False) -> str:
-    valore_pulito = "".join(c for c in str(valore).upper() if c.isalnum() or c in " -.")
-    if is_aic:
-        cifre = "".join(c for c in valore_pulito if c.isdigit()).zfill(9)
-        if not valida_aic(cifre):
-            cifre = calcola_checksum_aic(cifre[:8])
-        valore_pulito = cifre
-    elif not valore_pulito:
-        valore_pulito = "000000000"
+    return {
+        "citta_pura": info["nome"],
+        "cap": info["cap"],
+        "prov": info["prov"],
+        "nome_medico_bianca": f"{med['titolo']} {med['nome']}",
+        "nome_medico_ssn": med["nome"],
+        "cf_medico": med["cf"],
+        "via_medico": med["via"],
+        "tel_medico": med["tel"],
+        "header_regione": reg_info["header"],
+        "asl_cod": reg_info["asl_cod"],
+        "prefisso_nre": reg_info["prefisso_nre"],
+        "logo_file": reg_info["logo"]
+    }
 
+# ==========================================
+# GENERATORI BARCODE E PDF
+# ==========================================
+def genera_barcode_img(valore: str, nome_file_output: str, module_w: float = 0.28, module_h: float = 9.0) -> str:
     code39_class = barcode.get_barcode_class('code39')
     writer_options = {
         'write_text': False,
-        'module_width': 0.28,
-        'module_height': 14.0,
-        'quiet_zone': 1.0
+        'module_width': module_w,
+        'module_height': module_h,
+        'quiet_zone': 1.2
     }
-    my_barcode = code39_class(valore_pulito, writer=ImageWriter(), add_checksum=False)
+    my_barcode = code39_class(str(valore).upper(), writer=ImageWriter(), add_checksum=False)
     return my_barcode.save(os.path.join(OUTPUT_DIR, nome_file_output), options=writer_options)
 
-def crea_pdf_identico(dati: dict, pdf_path: str, bc_cf_path: str, bc_aic_path: str):
+def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farmaco_path: str):
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
-    pdf.set_xy(13.0, 36.0)
-    pdf.set_font("Times", "B", 11.5)
-    pdf.cell(0, 5.2, dati["nome_medico"], ln=True)
+    # Intestazione Medico in alto a sinistra (stile PDF [source: 5])
+    pdf.set_xy(18, 22)
+    pdf.set_font("Times", "B", 10.5)
+    pdf.cell(0, 5, dati["nome_medico_bianca"], ln=True)
+    
+    pdf.set_x(18)
+    pdf.set_font("Times", "I", 9.5)
+    pdf.cell(0, 4.5, "Medicina Generale", ln=True)
+    
+    pdf.set_x(18)
+    pdf.set_font("Times", "", 9.5)
+    pdf.cell(0, 4.5, dati["via_medico"], ln=True)
+    
+    pdf.set_x(18)
+    pdf.cell(0, 4.5, f"{dati['cap']} {dati['citta_pura']}", ln=True)
+    
+    pdf.set_x(18)
+    pdf.cell(0, 4.5, f"({dati['prov']})", ln=True)
+    
+    pdf.set_x(18)
+    pdf.cell(0, 4.5, f"Tel. {dati['tel_medico']}", ln=True)
 
-    pdf.set_x(14.5)
-    pdf.set_font("Times", "I", 11.5)
-    pdf.cell(0, 5.2, dati["spec_medico"], ln=True)
+    # Blocco Assistito
+    pdf.set_xy(18, 68)
+    pdf.set_font("Times", "B", 9.5)
+    pdf.cell(0, 5, "Assistito", ln=True)
+    
+    pdf.set_xy(18, 76)
+    pdf.set_font("Times", "", 10)
+    pdf.cell(0, 5, f"{dati['nome_assistito']} {dati['luogo_nascita'].upper()}", ln=True)
 
-    pdf.set_font("Times", "", 11.5)
-    pdf.set_x(13.0)
-    pdf.cell(0, 5.2, dati["via_medico"], ln=True)
-    pdf.set_x(13.0)
-    pdf.cell(0, 5.2, dati["cap_citta_medico"], ln=True)
-    pdf.set_x(13.0)
-    pdf.cell(0, 5.2, dati["prov_medico"], ln=True)
-    pdf.set_x(13.0)
-    pdf.cell(0, 5.2, f"Tel. {dati['tel_medico']}", ln=True)
+    # Blocco Codice Fiscale + Barcode
+    pdf.set_xy(18, 94)
+    pdf.set_font("Times", "", 9)
+    pdf.cell(0, 5, "Codice Fiscale:", ln=True)
+    pdf.image(bc_cf_path, x=24, y=100, w=72, h=13)
 
-    pdf.set_xy(13.0, 99.5)
-    pdf.set_font("Times", "B", 12)
-    pdf.cell(0, 6, "Assistito", ln=True)
+    # Blocco Prescrizione + Barcode AIC
+    pdf.set_xy(18, 126)
+    pdf.set_font("Times", "B", 9.5)
+    pdf.cell(0, 5, "Prescrizione:", ln=True)
+    pdf.image(bc_farmaco_path, x=21, y=134, w=58, h=13)
 
-    pdf.set_xy(13.0, 113.0)
-    pdf.set_font("Times", "", 12)
-    pdf.cell(0, 6, dati["nome_assistito"], ln=True)
+    # Testo Farmaco (Zero numero confezioni se ripetibile, N.1Conf. se non ripetibile)
+    pdf.set_xy(95, 150)
+    pdf.set_font("Times", "", 10)
+    prefisso_qta = "" if dati["is_ripetibile"] else "N.1Conf. "
+    pdf.cell(0, 5, f"{prefisso_qta}{dati['farmaco_nome']} ({dati['principio'].title()})", ln=True)
+    
+    pdf.set_x(95)
+    pdf.cell(0, 5, dati["variante_label"], ln=True)
+    
+    pdf.set_x(102)
+    pdf.cell(0, 5, dati["ripetibilita"], ln=True)
 
-    pdf.set_xy(13.0, 137.0)
-    pdf.set_font("Times", "", 12)
-    pdf.cell(0, 6, "Codice Fiscale:", ln=True)
-    pdf.image(bc_cf_path, x=21.5, y=143.0, w=66.0, h=14.5)
-
-    pdf.set_xy(13.0, 180.5)
-    pdf.set_font("Times", "B", 12)
-    pdf.cell(0, 6, "Prescrizione:", ln=True)
-    pdf.image(bc_aic_path, x=16.5, y=193.0, w=53.0, h=13.5)
-
-    pdf.set_font("Times", "", 13)
-    pdf.set_xy(84.5, 207.0)
-    pdf.cell(0, 6.2, dati["farmaco_riga1"], ln=True)
-
-    pdf.set_xy(83.0, 213.5)
-    pdf.cell(0, 6.2, dati["farmaco_riga2"], ln=True)
-
-    if dati.get("farmaco_riga4"):
-        pdf.set_xy(83.0, 220.0)
-        pdf.cell(0, 6.2, dati["farmaco_riga3"], ln=True)
-        pdf.set_xy(89.0, 226.5)
-        pdf.cell(0, 6.2, dati["farmaco_riga4"], ln=True)
-    else:
-        pdf.set_xy(89.0, 220.0)
-        pdf.cell(0, 6.2, dati["farmaco_riga3"], ln=True)
-
-    pdf.set_font("Times", "", 12)
-    pdf.set_xy(11.0, 236.5)
-    pdf.cell(80, 6, dati["luogo_data"], ln=0)
-
-    pdf.set_xy(132.0, 236.5)
-    pdf.cell(40, 6, "Firma", ln=1)
+    # Data e Firma in calce
+    pdf.set_xy(18, 178)
+    pdf.set_font("Times", "", 9.5)
+    pdf.cell(90, 5, f"{dati['citta_pura']}, {dati['data_emissione']}", ln=False)
+    pdf.cell(60, 5, "Firma", align="C", ln=True)
 
     pdf.output(pdf_path)
 
-class FormPrescrizione(StatesGroup):
+def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, bc_nre2_path: str, bc_cf_path: str):
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.set_auto_page_break(False)
+    pdf.add_page()
+
+    # Bordo esterno generale del promemoria SSN
+    pdf.rect(10, 10, 190, 132)
+
+    # Logo regionale dinamico se presente
+    logo_path = os.path.join(ASSETS_DIR, dati["logo_file"])
+    if os.path.exists(logo_path):
+        pdf.image(logo_path, x=12, y=12, w=14)
+
+    # Intestazione Sinistra: SSN + Regione
+    pdf.set_xy(28, 12)
+    pdf.set_font("Helvetica", "B", 8.5)
+    linee_reg = dati["header_regione"].splitlines()
+    pdf.cell(65, 4, linee_reg[0], ln=True)
+    pdf.set_x(28)
+    pdf.cell(65, 4, linee_reg[1] if len(linee_reg) > 1 else "", ln=True)
+
+    # Intestazione Destra: Promemoria e Doppio Barcode NRE (Prefisso + Progressivo come reference [source: 6])
+    pdf.set_xy(95, 11)
+    pdf.set_font("Helvetica", "B", 7.5)
+    pdf.cell(100, 4, "RICETTA ELETTRONICA - PROMEMORIA PER L'ASSISTITO", align="R", ln=True)
+
+    # Barcode NRE 1 (es. *160A2*) e NRE 2 (es. *4690698333*)
+    pdf.image(bc_nre1_path, x=98, y=16, w=32, h=8)
+    pdf.image(bc_nre2_path, x=135, y=16, w=60, h=8)
+    pdf.set_xy(98, 24.5)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.cell(32, 3, f"*{dati['nre_part1']}*", align="C", ln=False)
+    pdf.set_x(135)
+    pdf.cell(60, 3, f"*{dati['nre_part2']}*", align="C", ln=True)
+
+    # Linea separatrice sotto l'intestazione
+    pdf.line(10, 29, 200, 29)
+
+    # Colonna Sinistra: Dati Assistito | Colonna Destra: Barcode Codice Fiscale
+    pdf.set_xy(12, 31)
+    pdf.set_font("Helvetica", "B", 7.5)
+    pdf.cell(110, 4, f"COGNOME E NOME/INIZIALI DELL'ASSISTITO: {dati['nome_assistito']}", ln=True)
+    
+    pdf.set_x(12)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.cell(110, 4, f"INDIRIZZO: {dati['indirizzo_assistito']}", ln=True)
+    
+    pdf.set_x(12)
+    pdf.cell(110, 4, f"CAP: {dati['cap']} CITTA': {dati['citta_pura'].upper()}   PROV: {dati['prov']}", ln=True)
+
+    # Barcode Codice Fiscale a destra
+    pdf.set_xy(125, 30)
+    pdf.set_font("Helvetica", "B", 7.5)
+    pdf.cell(70, 3.5, f"*{dati['cf_assistito']}*", align="C", ln=True)
+    pdf.image(bc_cf_path, x=125, y=34, w=70, h=9)
+
+    # Griglia Centrale Parametri SSN (Senza esenzione sospetta, dinamica e pulita)
+    pdf.line(10, 45, 200, 45)
+    pdf.set_xy(12, 46)
+    pdf.set_font("Helvetica", "", 6.8)
+    pdf.cell(65, 4, f"CODICE ASL: {dati['asl_cod']}", ln=False)
+    pdf.cell(65, 4, f"SIGLA PROVINCIA: {dati['prov']}", ln=False)
+    pdf.cell(55, 4, "ESENZIONE: NON ESENTE", ln=True)
+
+    pdf.set_x(12)
+    qta_box = "" if dati["is_ripetibile"] else "1"
+    pdf.cell(65, 4, "TIPOLOGIA PRESCRIZIONE(S,H):", ln=False)
+    pdf.cell(65, 4, "TIPO RICETTA: Assist. SSN", ln=False)
+    pdf.cell(55, 4, f"N.CONFEZIONI/PRESTAZIONI: {qta_box}", ln=True)
+
+    pdf.set_x(12)
+    pdf.cell(65, 4, "PRIORITA' PRESCRIZIONE(U,B,D,P):", ln=False)
+    pdf.cell(65, 4, "DISPOSIZIONI REGIONALI:", ln=False)
+    pdf.cell(55, 4, "ALTRO:", ln=True)
+
+    pdf.line(10, 59, 200, 59)
+    pdf.set_xy(12, 60)
+    pdf.cell(185, 4, "QUESITO DIAGNOSTICO:", ln=True)
+
+    # Blocco Medico e Data
+    pdf.line(10, 65, 200, 65)
+    pdf.set_xy(12, 66)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.cell(95, 4, f"COGNOME E NOME DEL MEDICO: {dati['nome_medico_ssn']}", ln=False)
+    pdf.cell(90, 4, f"CODICE FISCALE DEL MEDICO: {dati['cf_medico']}", ln=True)
+
+    pdf.set_x(12)
+    pdf.cell(95, 4, f"CODICE AUTENTICAZIONE: {dati['cod_autenticazione']}", ln=False)
+    pdf.cell(90, 4, f"DATA: {dati['data_emissione']}", ln=True)
+
+    # Tabella Prescrizione
+    pdf.line(10, 75, 200, 75)
+    pdf.set_xy(12, 76)
+    pdf.set_font("Helvetica", "B", 7.5)
+    pdf.cell(150, 4.5, "PRESCRIZIONE", ln=False)
+    pdf.cell(18, 4.5, "QTA", align="C", ln=False)
+    pdf.cell(18, 4.5, "NOTA", align="C", ln=True)
+    pdf.line(10, 81, 200, 81)
+
+    pdf.set_xy(12, 83)
+    pdf.set_font("Helvetica", "", 7.5)
+    riga_farmaco = f"{dati['aic_farmaco']} {dati['ssn_str']}: {dati['principio']}; Pos: {dati['posologia']}"
+    pdf.cell(150, 5, riga_farmaco, ln=False)
+    pdf.cell(18, 5, qta_box, align="C", ln=False)
+    pdf.cell(18, 5, "", align="C", ln=True)
+
+    # Footer del Promemoria
+    pdf.line(10, 128, 200, 128)
+    pdf.set_xy(12, 130)
+    pdf.set_font("Helvetica", "", 6)
+    pdf.cell(150, 3.5, "Rilasciato ai sensi dell'art. 11, comma 16 del DL 31 mag 2010, n.78 e dell'art. 1, comma 4 del DM 2 nov 2011", ln=False)
+    pdf.set_font("Helvetica", "B", 7)
+    pdf.cell(35, 3.5, "TICKET", align="R", ln=True)
+
+    pdf.output(pdf_path)
+
+# ==========================================
+# MACCHINA A STATI (FSM) E HANDLER TELEGRAM
+# ==========================================
+class FormPratica(StatesGroup):
+    tipo_ricetta = State()
     paziente = State()
     citta = State()
     farmaco = State()
-    scelta_dosaggio = State()
-    luogo_data = State()
-    attesa_pagamento = State()
+    variante = State()
+    posologia = State()
 
-@dp.message(F.text.func(lambda t: t and t.strip().lower() == SECRET_PASS))
-async def sblocco_lifetime(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    VIP_USERS.add(uid)
-    salva_vip(uid)
-    await state.clear()
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+def tastiera_principale() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📄 Nuova Pratica")],
+            [KeyboardButton(text="💎 Stato Crediti & VIP")]
+        ],
         resize_keyboard=True
-    )
-    await message.answer(
-        "🔓 **Accesso Lifetime Attivato.**\nPaywall disattivato per il tuo account.",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
-
-@dp.message(F.text.func(lambda t: t and t.strip().lower() == FREE_PASS))
-async def sblocco_crediti_gratuiti(message: Message, state: FSMContext):
-    uid = message.from_user.id
-    aggiungi_crediti_gratuiti(uid, 3)
-    await state.clear()
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-        resize_keyboard=True
-    )
-    crediti_rimasti = carica_crediti().get(str(uid), 0)
-    await message.answer(
-        f"⚽ **Forza Foggia!**\nHai ottenuto **3 ricette gratuite**.\nCrediti gratuiti residui: `{crediti_rimasti}`.",
-        reply_markup=kb,
-        parse_mode="Markdown"
     )
 
 @dp.message(Command("start"))
@@ -842,309 +708,280 @@ async def cmd_start(message: Message, state: FSMContext):
     uid = message.from_user.id
     is_vip = uid in VIP_USERS
     crediti = carica_crediti().get(str(uid), 0)
-
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-        resize_keyboard=True
-    )
-    if is_vip:
-        testo = "⚡ **Sistema Attivo (Licenza Lifetime)**\n\nPremi il pulsante in basso per procedere o usa i bottoni."
-    elif crediti > 0:
-        testo = f"🎁 **Hai {crediti} ricette gratuite disponibili!**\n\nPremi il pulsante in basso per procedere."
-    else:
-        testo = (
-            "🔒 **Sistema Riservato**\n\n"
-            "**Tariffario Emissione Singola:**\n"
-            f"• 💊 Benzodiazepine / Sedativi: **{PREZZO_BENZO}€** (BTC)\n"
-            f"• 💉 Oppioidi: **{PREZZO_OPPIOIDI}€** (BTC)\n"
-            "• 📋 Altri farmaci: Su richiesta al proprietario\n\n"
-            "_Nota: Il comando /start serve solo al primo avvio. Dopodiché potrai usare direttamente i bottoni rapidi qui sotto!_"
-        )
-    await message.answer(testo, reply_markup=kb, parse_mode="Markdown")
-
-@dp.message(F.text == "📄 Nuova Pratica")
-async def step_paziente(message: Message, state: FSMContext):
-    await state.set_state(FormPrescrizione.paziente)
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="❌ Annulla")]],
-        resize_keyboard=True
-    )
+    
     await message.answer(
-        "👤 **Inserisci Nome, Cognome, Comune e Data di nascita:**",
-        reply_markup=kb,
+        f"👋 **Benvenuto nel Sistema Prescrizioni Dinamico!**\n\n"
+        f"🔹 **Stato VIP:** {'👑 Attivo (Illimitato)' if is_vip else '❌ Non attivo'}\n"
+        f"🔹 **Crediti gratuiti:** `{crediti}`\n\n"
+        f"Seleziona un'opzione dal menu sottostante (oppure invia in qualsiasi momento un codice promo):",
+        reply_markup=tastiera_principale(),
         parse_mode="Markdown"
     )
 
-@dp.message(F.text == "❌ Annulla")
-async def annulla_operazione(message: Message, state: FSMContext):
-    await state.clear()
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-        resize_keyboard=True
-    )
-    await message.answer("Operazione annullata. Premi il bottone per una nuova pratica:", reply_markup=kb)
+@dp.message(F.text.lower() == FREE_PASS)
+async def sblocca_crediti_global(message: Message):
+    aggiungi_crediti_gratuiti(message.from_user.id, 3)
+    tot = carica_crediti().get(str(message.from_user.id), 0)
+    await message.answer(f"✅ **Codice '{FREE_PASS}' attivato!**\nHai ricevuto +3 crediti gratuiti (Totale: `{tot}`).", parse_mode="Markdown")
 
-@dp.message(FormPrescrizione.paziente)
-async def ricevi_paziente(message: Message, state: FSMContext):
-    info_paz = analizza_input_paziente_smart(message.text)
+@dp.message(F.text.lower() == SECRET_PASS)
+async def sblocca_vip_global(message: Message):
+    salva_vip(message.from_user.id)
+    VIP_USERS.add(message.from_user.id)
+    await message.answer("👑 **Licenza Lifetime VIP sbloccata con successo!**\nGenerazioni illimitate attive.", parse_mode="Markdown")
 
-    await state.update_data(
-        nome_assistito=info_paz["nome_assistito"],
-        cf_assistito=info_paz["cf_assistito"]
-    )
-    await state.set_state(FormPrescrizione.citta)
-
-    righe_tastiera = []
-    luogo_nascita_norm = info_paz["luogo_nascita"].strip().lower()
-    if luogo_nascita_norm not in CITTA_ESCLUSE_BOTTONI and luogo_nascita_norm not in ["milano", "roma", "bari", "napoli", "torino", "bologna"]:
-        righe_tastiera.append([KeyboardButton(text=info_paz["luogo_nascita"])])
-
-    righe_tastiera.append([KeyboardButton(text="Milano"), KeyboardButton(text="Roma"), KeyboardButton(text="Napoli")])
-    righe_tastiera.append([KeyboardButton(text="Torino"), KeyboardButton(text="Bologna"), KeyboardButton(text="Bari")])
-
-    kb = ReplyKeyboardMarkup(
-        keyboard=righe_tastiera,
-        resize_keyboard=True
-    )
-    await message.answer(
-        "🏥 **Indica la città di emissione:**",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
-
-@dp.message(FormPrescrizione.citta)
-async def ricevi_citta(message: Message, state: FSMContext):
-    medico_dati = risolvi_citta_e_medico(message.text)
-    await state.update_data(**medico_dati)
-    await state.set_state(FormPrescrizione.farmaco)
-
-    kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Rivotril"), KeyboardButton(text="Xanax"), KeyboardButton(text="Tavor")],
-            [KeyboardButton(text="Stilnox"), KeyboardButton(text="Lyrica"), KeyboardButton(text="Valium")],
-            [KeyboardButton(text="Depalgos"), KeyboardButton(text="Targin"), KeyboardButton(text="Durogesic")]
-        ],
-        resize_keyboard=True
-    )
-    await message.answer(
-        "💊 **Indica il prodotto richiesto:**",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
-
-@dp.message(FormPrescrizione.farmaco)
-async def ricevi_farmaco(message: Message, state: FSMContext):
-    chiave_trovata = trova_farmaco_smart(message.text)
-
-    if chiave_trovata:
-        scheda = FARMACI_DB[chiave_trovata]
-        categoria = scheda["categoria"]
-        prezzo = scheda["prezzo"] if scheda["prezzo"] is not None else PREZZO_BENZO
-
-        varianti = scheda["varianti"]
-        await state.update_data(
-            farmaco_nome_ufficiale=scheda["nome"],
-            farmaco_principio=scheda["principio"],
-            farmaco_layout=scheda["layout"],
-            farmaco_categoria=categoria,
-            farmaco_prezzo=prezzo,
-            varianti_correnti=varianti
-        )
-        botones = [[KeyboardButton(text=v["label"])] for v in varianti]
-        kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
-        await state.set_state(FormPrescrizione.scelta_dosaggio)
-        await message.answer(
-            f"📋 **Formato per {scheda['nome']} ({scheda['principio']}):**",
-            reply_markup=kb,
-            parse_mode="Markdown"
-        )
-    else:
-        nome_pulito = de_leet_parola(message.text.strip().split()[0]) or "FARMACO"
-        base_rand = f"0{random.randint(30000, 45000)}"
-        varianti_custom = [
-            {"label": "20 Compresse 10MG", "aic": calcola_checksum_aic(f"{base_rand}01"), "unita": "Conf.", "qta_str": "20CPR", "dos_str": "10MG", "rip": "(Ripetibile)"},
-            {"label": "30 Compresse 20MG", "aic": calcola_checksum_aic(f"{base_rand}02"), "unita": "Conf.", "qta_str": "30CPR", "dos_str": "20MG", "rip": "(Non ripetibile)"},
-            {"label": "Gocce Orali 2.5MG/ML", "aic": calcola_checksum_aic(f"{base_rand}03"), "unita": "Flac.", "qta_str": "10ML", "dos_str": "2.5MG/ML", "rip": "(Ripetibile)"}
-        ]
-        await state.update_data(
-            farmaco_nome_ufficiale=nome_pulito,
-            farmaco_principio="Principio Attivo",
-            farmaco_layout="long",
-            farmaco_categoria="altro",
-            farmaco_prezzo=PREZZO_BENZO,
-            varianti_correnti=varianti_custom
-        )
-        botones = [[KeyboardButton(text=v["label"])] for v in varianti_custom]
-        kb = ReplyKeyboardMarkup(keyboard=botones, resize_keyboard=True)
-        await state.set_state(FormPrescrizione.scelta_dosaggio)
-        await message.answer("📋 **Seleziona il formato:**", reply_markup=kb, parse_mode="Markdown")
-
-@dp.message(FormPrescrizione.scelta_dosaggio)
-async def ricevi_dosaggio(message: Message, state: FSMContext):
-    scelta_txt = message.text.strip()
-    dati = await state.get_data()
-    varianti = dati.get("varianti_correnti", [])
-
-    variante_scelta = varianti[0]
-    for v in varianti:
-        if v["label"].lower() == scelta_txt.lower() or scelta_txt.lower() in v["label"].lower():
-            variante_scelta = v
-            break
-
-    nome_f = dati["farmaco_nome_ufficiale"]
-    princ = dati["farmaco_principio"]
-    layout = dati["farmaco_layout"]
-    var = variante_scelta
-    unita = var["unita"]
-
-    if princ and princ != "Specificifica" and princ != "Principio Attivo":
-        princ_str = f"({princ})"
-    else:
-        princ_str = ""
-
-    is_ripetibile = "(Ripetibile)" in var.get("rip", "")
-
-    # SE RIPETIBILE -> NESSUN NUMERO DI CONFEZIONI
-    if is_ripetibile:
-        if layout == "long":
-            riga1 = f"{nome_f}"
-            riga2 = f"{princ_str} {var.get('qta_str', '')}".strip()
-            riga3 = f"{var['dos_str']}"
-            riga4 = f"{var['rip']}"
-        else:
-            riga1 = f"{nome_f} {princ_str}".strip()
-            riga2 = f"{var['dos_str']}"
-            riga3 = f"{var['rip']}"
-            riga4 = None
-    else:
-        # SE NON RIPETIBILE -> MANTIENE N.1Conf.
-        qta_num = "1"
-        if layout == "long":
-            riga1 = f"N.{qta_num}{unita} {nome_f}"
-            riga2 = f"{princ_str} {var.get('qta_str', '')}".strip()
-            riga3 = f"{var['dos_str']}"
-            riga4 = f"{var['rip']}"
-        else:
-            if princ_str:
-                riga1 = f"N.{qta_num}{unita} {nome_f} {princ_str}"
-            else:
-                riga1 = f"N.{qta_num}{unita} {nome_f}"
-            riga2 = f"{var['dos_str']}"
-            riga3 = f"{var['rip']}"
-            riga4 = None
-
-    await state.update_data(
-        farmaco_riga1=riga1,
-        farmaco_riga2=riga2,
-        farmaco_riga3=riga3,
-        farmaco_riga4=riga4,
-        aic_farmaco=var["aic"]
-    )
-    await state.set_state(FormPrescrizione.luogo_data)
-
-    oggi = datetime.now().strftime("%d/%m/%Y")
-    citta_med = dati["citta_pura"]
-
-    kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=f"{citta_med}, {oggi}")],
-            [KeyboardButton(text=f"{citta_med}, 04/09/2025")]
-        ],
-        resize_keyboard=True
-    )
-    await message.answer(
-        "📅 **Conferma o inserisci la data:**",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
-
-@dp.message(FormPrescrizione.luogo_data)
-async def gestisci_emissione_o_paywall(message: Message, state: FSMContext):
-    txt_data = message.text.strip()
-    dati = await state.get_data()
-    citta_med = dati["citta_pura"]
-
-    m_d = re.search(r'(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})', txt_data)
-    if m_d:
-        gg = int(m_d.group(1))
-        mm = int(m_d.group(2))
-        aaaa = normalizza_anno(m_d.group(3))
-        luogo_data_finale = f"{citta_med}, {gg:02d}/{mm:02d}/{aaaa}"
-    elif "," in txt_data:
-        luogo_data_finale = txt_data
-    else:
-        luogo_data_finale = f"{citta_med}, {datetime.now().strftime('%d/%m/%Y')}"
-
-    await state.update_data(luogo_data=luogo_data_finale)
-    dati = await state.get_data()
-
+@dp.message(F.text == "💎 Stato Crediti & VIP")
+async def stato_crediti_handler(message: Message):
     uid = message.from_user.id
     is_vip = uid in VIP_USERS
-    ha_credito = scala_credito(uid)
+    crediti = carica_crediti().get(str(uid), 0)
+    await message.answer(
+        f"📊 **Riepilogo Account**\n"
+        f"• ID Utente: `{uid}`\n"
+        f"• Licenza VIP: `{'ATTIVA' if is_vip else 'NON ATTIVA'}`\n"
+        f"• Crediti residui: `{crediti}`\n\n"
+        f"💰 **Listino Prezzi:**\n"
+        f"• Benzodiazepine: `{PREZZO_BENZO}€`\n"
+        f"• Oppioidi: `{PREZZO_OPPIOIDI}€`",
+        parse_mode="Markdown"
+    )
 
-    if is_vip or ha_credito:
-        await state.clear()
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        bc_cf = genera_barcode_pulito(dati["cf_assistito"], f"bc_cf_{timestamp}", is_aic=False)
-        bc_aic = genera_barcode_pulito(dati["aic_farmaco"], f"bc_aic_{timestamp}", is_aic=True)
-
-        pdf_path = os.path.join(OUTPUT_DIR, f"DOC_{timestamp}.pdf")
-        crea_pdf_identico(dati, pdf_path, bc_cf, bc_aic)
-
-        kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
-            resize_keyboard=True
-        )
-        msg_caption = "✅ **Documento Emesso (Gratuito - Credito utilizzato).**" if not is_vip else "✅ **Documento Emesso (VIP).**"
-        await message.answer_document(
-            FSInputFile(pdf_path),
-            caption=msg_caption,
-            reply_markup=kb,
-            parse_mode="Markdown"
-        )
-        return
-
-    prezzo = dati.get("farmaco_prezzo", PREZZO_OPPIOIDI)
-    cat_label = "Benzodiazepine" if dati.get("farmaco_categoria") == "benzo" else "Oppioidi"
-
-    await state.set_state(FormPrescrizione.attesa_pagamento)
+@dp.message(F.text == "📄 Nuova Pratica")
+async def scegli_tipo_ricetta(message: Message, state: FSMContext):
+    await state.set_state(FormPratica.tipo_ricetta)
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔄 Verifica Transazione BTC")],
+            [KeyboardButton(text="📋 Ricetta Bianca Classica"), KeyboardButton(text="🌐 Ricetta Elettronica (SSN)")],
             [KeyboardButton(text="❌ Annulla")]
         ],
         resize_keyboard=True
     )
+    await message.answer("Seleziona la tipologia di ricetta che vuoi generare:", reply_markup=kb)
+
+@dp.message(F.text == "❌ Annulla")
+async def annulla_operazione(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Operazione annullata.", reply_markup=tastiera_principale())
+
+@dp.message(FormPratica.tipo_ricetta, F.text.in_(["📋 Ricetta Bianca Classica", "🌐 Ricetta Elettronica (SSN)"]))
+async def ricevi_tipo_ricetta(message: Message, state: FSMContext):
+    is_elettronica = "Elettronica" in message.text
+    await state.update_data(is_elettronica=is_elettronica)
+    await state.set_state(FormPratica.paziente)
+    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="❌ Annulla")]], resize_keyboard=True)
     await message.answer(
-        f"🔒 **PAGAMENTO RICHIESTO PER IL RILASCIO**\n\n"
-        f"• **Categoria:** {cat_label}\n"
-        f"• **Importo dovuto:** 💶 `{prezzo}€` in Bitcoin (BTC)\n\n"
-        f"Invia esattamente **{prezzo}€** in BTC al seguente indirizzo:\n"
-        f"`{BTC_WALLET}`\n\n"
-        f"_Dopo aver inviato la transazione, incolla qui il TXID o premi il pulsante di verifica._",
+        "👤 **Dati Assistito**\nInserisci Cognome, Nome, Comune di nascita e Data di nascita (es. `Rossi Mario Milano 15/04/1990`):\n*(Il bot calcolerà il Codice Fiscale reale in automatico)*",
         reply_markup=kb,
         parse_mode="Markdown"
     )
 
-@dp.message(FormPrescrizione.attesa_pagamento)
-async def verifica_pagamento_finto(message: Message, state: FSMContext):
+@dp.message(FormPratica.paziente)
+async def ricevi_paziente(message: Message, state: FSMContext):
+    info = analizza_input_paziente_smart(message.text)
+    await state.update_data(**info)
+    await state.set_state(FormPratica.citta)
+
+    # Costruzione pulsanti città escludendo Foggia e provincia dai bottoni visibili
+    tasti_citta = []
+    riga = []
+    for k, val in CITTA_DB.items():
+        if k not in CITTA_ESCLUSE_BOTTONI:
+            riga.append(KeyboardButton(text=val["nome"]))
+            if len(riga) == 3:
+                tasti_citta.append(riga)
+                riga = []
+    if riga:
+        tasti_citta.append(riga)
+    tasti_citta.append([KeyboardButton(text="❌ Annulla")])
+
+    kb = ReplyKeyboardMarkup(keyboard=tasti_citta, resize_keyboard=True)
+    await message.answer(
+        f"✅ Assistito: `{info['nome_assistito']}`\n"
+        f"🆔 CF Calcolato: `{info['cf_assistito']}`\n\n"
+        f"🏥 **Seleziona o digita a mano la città di emissione** (determina automaticamente Medico, ASL, Regione e Logo):",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+@dp.message(FormPratica.citta)
+async def ricevi_citta(message: Message, state: FSMContext):
+    med_info = risolvi_citta_e_medico(message.text)
+    await state.update_data(**med_info)
+    await state.set_state(FormPratica.farmaco)
+
+    tasti_farmaci = []
+    riga = []
+    for k in FARMACI_DB.keys():
+        riga.append(KeyboardButton(text=k))
+        if len(riga) == 3:
+            tasti_farmaci.append(riga)
+            riga = []
+    if riga:
+        tasti_farmaci.append(riga)
+    tasti_farmaci.append([KeyboardButton(text="❌ Annulla")])
+
+    kb = ReplyKeyboardMarkup(keyboard=tasti_farmaci, resize_keyboard=True)
+    await message.answer(
+        f"👨‍⚕️ Medico assegnato: `{med_info['nome_medico_bianca']}` ({med_info['citta_pura']} - {med_info['prov']})\n\n"
+        f"💊 **Seleziona il farmaco da prescrivere:**",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+@dp.message(FormPratica.farmaco)
+async def ricevi_farmaco(message: Message, state: FSMContext):
+    txt = message.text.strip().upper()
+    farmaco_chiave = "XANAX"
+    for k in FARMACI_DB:
+        if k in txt:
+            farmaco_chiave = k
+            break
+
+    scheda = FARMACI_DB[farmaco_chiave]
+    varianti = scheda["varianti"]
+
+    await state.update_data(
+        farmaco_chiave=farmaco_chiave,
+        farmaco_nome=scheda["nome"],
+        principio=scheda["principio"],
+        prezzo_farmaco=scheda["prezzo"]
+    )
+
+    if len(varianti) == 1:
+        var = varianti[0]
+        await state.update_data(
+            aic_farmaco=var["aic"],
+            variante_label=var["label"],
+            ssn_str=var["ssn_str"],
+            ripetibilita=var["rip"],
+            is_ripetibile=var["is_rip"]
+        )
+        await state.set_state(FormPratica.posologia)
+        kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="1 cpr die"), KeyboardButton(text="1 cpr prima di dormire")],
+                [KeyboardButton(text="1 cpr e mezza die"), KeyboardButton(text="20 gocce al bisogno")],
+                [KeyboardButton(text="❌ Annulla")]
+            ],
+            resize_keyboard=True
+        )
+        await message.answer("📝 **Seleziona o digita la posologia:**", reply_markup=kb, parse_mode="Markdown")
+    else:
+        await state.set_state(FormPratica.variante)
+        tasti_var = [[KeyboardButton(text=v["label"])] for v in varianti]
+        tasti_var.append([KeyboardButton(text="❌ Annulla")])
+        kb = ReplyKeyboardMarkup(keyboard=tasti_var, resize_keyboard=True)
+        await message.answer(f"📦 **Seleziona il dosaggio/formato per {scheda['nome']}:**", reply_markup=kb, parse_mode="Markdown")
+
+@dp.message(FormPratica.variante)
+async def ricevi_variante(message: Message, state: FSMContext):
+    dati = await state.get_data()
+    scheda = FARMACI_DB[dati["farmaco_chiave"]]
+    scelta = message.text.strip().upper()
+    
+    var_scelta = scheda["varianti"][0]
+    for v in scheda["varianti"]:
+        if v["label"].upper() == scelta or scelta in v["label"].upper():
+            var_scelta = v
+            break
+
+    await state.update_data(
+        aic_farmaco=var_scelta["aic"],
+        variante_label=var_scelta["label"],
+        ssn_str=var_scelta["ssn_str"],
+        ripetibilita=var_scelta["rip"],
+        is_ripetibile=var_scelta["is_rip"]
+    )
+    await state.set_state(FormPratica.posologia)
     kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📄 Nuova Pratica")]],
+        keyboard=[
+            [KeyboardButton(text="1 cpr die"), KeyboardButton(text="1 cpr prima di dormire")],
+            [KeyboardButton(text="1 cpr e mezza die"), KeyboardButton(text="20 gocce al bisogno")],
+            [KeyboardButton(text="❌ Annulla")]
+        ],
         resize_keyboard=True
     )
-    await message.answer(
-        "⏳ **Transazione non rilevata sulla Blockchain.**\n\n"
-        f"Assicurati di aver inviato l'importo esatto al wallet:\n`{BTC_WALLET}`",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
+    await message.answer("📝 **Seleziona o digita la posologia:**", reply_markup=kb, parse_mode="Markdown")
 
-async def handle(request):
-    return web.Response(text="Service operational.")
+@dp.message(FormPratica.posologia)
+async def genera_documento_finale(message: Message, state: FSMContext):
+    await state.update_data(posologia=message.text.strip())
+    dati = await state.get_data()
+    uid = message.from_user.id
+
+    # Controllo VIP / Crediti / Pagamento BTC
+    if uid not in VIP_USERS:
+        if not scala_credito(uid):
+            prezzo = dati["prezzo_farmaco"]
+            await message.answer(
+                f"⛔ **Crediti esauriti!**\n\n"
+                f"Per generare la prescrizione per **{dati['farmaco_nome']}** (`{prezzo}€`), invia il pagamento in Bitcoin (BTC) al seguente wallet:\n\n"
+                f"`{BTC_WALLET}`\n\n"
+                f"💡 *Hai un codice promo? Invialo direttamente in chat per ricaricare i crediti o sbloccare il VIP.*",
+                reply_markup=tastiera_principale(),
+                parse_mode="Markdown"
+            )
+            await state.clear()
+            return
+
+    ora_attuale = datetime.now()
+    dati["data_emissione"] = ora_attuale.strftime("%d/%m/%Y")
+    timestamp = ora_attuale.strftime("%Y%m%d_%H%M%S")
+
+    if dati["is_elettronica"]:
+        dati["nre_part1"] = dati["prefisso_nre"]
+        dati["nre_part2"] = f"{random.randint(1000000000, 9999999999)}"
+        dati["cod_autenticazione"] = f"{ora_attuale.strftime('%d%m%Y%H%M%S')}{random.randint(1000000000000000, 9999999999999999)}"
+
+        bc_nre1 = genera_barcode_img(dati["nre_part1"], f"nre1_{timestamp}", module_w=0.25, module_h=7.0)
+        bc_nre2 = genera_barcode_img(dati["nre_part2"], f"nre2_{timestamp}", module_w=0.25, module_h=7.0)
+        bc_cf = genera_barcode_img(dati["cf_assistito"], f"cf_ssn_{timestamp}", module_w=0.25, module_h=8.0)
+
+        nome_pdf = f"{dati['nre_part1']}{dati['nre_part2']}.pdf"
+        pdf_path = os.path.join(OUTPUT_DIR, nome_pdf)
+        crea_pdf_ricetta_elettronica(dati, pdf_path, bc_nre1, bc_nre2, bc_cf)
+
+        await message.answer_document(
+            FSInputFile(pdf_path),
+            caption=(
+                f"✅ **Promemoria Ricetta Elettronica (SSN) generato!**\n"
+                f"🏛 `{dati['header_regione'].splitlines()[-1]}`\n"
+                f"🔢 NRE: `{dati['nre_part1']}{dati['nre_part2']}`\n"
+                f"👨‍⚕️ Medico: `{dati['nome_medico_ssn']}`"
+            ),
+            reply_markup=tastiera_principale(),
+            parse_mode="Markdown"
+        )
+    else:
+        bc_cf = genera_barcode_img(dati["cf_assistito"], f"cf_b_{timestamp}", module_w=0.28, module_h=10.0)
+        bc_farmaco = genera_barcode_img(dati["aic_farmaco"], f"aic_b_{timestamp}", module_w=0.28, module_h=10.0)
+
+        nome_pdf = f"DOC_{timestamp}.pdf"
+        pdf_path = os.path.join(OUTPUT_DIR, nome_pdf)
+        crea_pdf_ricetta_bianca(dati, pdf_path, bc_cf, bc_farmaco)
+
+        await message.answer_document(
+            FSInputFile(pdf_path),
+            caption=(
+                f"✅ **Ricetta Bianca Classica generata!**\n"
+                f"👨‍⚕️ Medico: `{dati['nome_medico_bianca']}`\n"
+                f"💊 Farmaco: `{dati['farmaco_nome']} ({dati['variante_label']})`"
+            ),
+            reply_markup=tastiera_principale(),
+            parse_mode="Markdown"
+        )
+
+    await state.clear()
+
+# ==========================================
+# WEB SERVER KEEP-ALIVE PER RENDER / UPTIMEROBOT
+# ==========================================
+async def health_check(request):
+    return web.Response(text="Bot Ricette Service Operational 24/7.")
 
 async def main():
     app = web.Application()
-    app.router.add_get("/", handle)
+    app.router.add_get("/", health_check)
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", 10000))
