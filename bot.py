@@ -408,7 +408,7 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
     gg, mm, aaaa = 24, 3, 1995
     testo_senza_data = testo
 
-    pattern_num = r'(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})'
+    pattern_num = r'\b(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})\b'
     m_num = re.search(pattern_num, testo)
     if m_num:
         gg = max(1, min(31, int(m_num.group(1))))
@@ -421,13 +421,13 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
     tutte_localita = {**{k: v["catastale"] for k, v in CITTA_DB.items()}, **CATASTALI_EXTRA}
     
     for loc, cat in sorted(tutte_localita.items(), key=lambda x: len(x[0]), reverse=True):
-        if re.search(rf'{re.escape(loc)}', testo_senza_data.lower()):
+        if re.search(rf'\b{re.escape(loc)}\b', testo_senza_data.lower()):
             luogo_trovato = loc
             catastale = cat
-            testo_senza_data = re.sub(rf'{re.escape(loc)}', ' ', testo_senza_data, flags=re.IGNORECASE)
+            testo_senza_data = re.sub(rf'\b{re.escape(loc)}\b', ' ', testo_senza_data, flags=re.IGNORECASE)
             break
 
-    testo_pulito = re.sub(r'(nato|nata|nat|il|del|a|in|da|di)', ' ', testo_senza_data, flags=re.IGNORECASE)
+    testo_pulito = re.sub(r'\b(nato|nata|nat|il|del|a|in|da|di)\b', ' ', testo_senza_data, flags=re.IGNORECASE)
     tokens_raw = [de_leet_parola(t) for t in testo_pulito.split() if t.strip() and not t.isdigit()]
     tokens_raw = [t for t in tokens_raw if t]
 
@@ -485,17 +485,17 @@ def risolvi_citta_e_medico(citta_input: str) -> dict:
     }
 
 # ==========================================
-# GENERATORI BARCODE E PDF
+# GENERATORI BARCODE (CODE 128) E PDF
 # ==========================================
-def genera_barcode_img(valore: str, nome_file_output: str, module_w: float = 0.28, module_h: float = 9.0) -> str:
-    code39_class = barcode.get_barcode_class('code39')
+def genera_barcode_img(valore: str, nome_file_output: str, module_w: float = 0.25, module_h: float = 9.0) -> str:
+    code128_class = barcode.get_barcode_class('code128')
     writer_options = {
         'write_text': False,
         'module_width': module_w,
         'module_height': module_h,
-        'quiet_zone': 1.2
+        'quiet_zone': 1.0
     }
-    my_barcode = code39_class(str(valore).upper(), writer=ImageWriter(), add_checksum=False)
+    my_barcode = code128_class(str(valore).upper(), writer=ImageWriter())
     return my_barcode.save(os.path.join(OUTPUT_DIR, nome_file_output), options=writer_options)
 
 def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farmaco_path: str):
@@ -503,7 +503,7 @@ def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farma
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
-    # Intestazione Medico in alto a sinistra (stile PDF [source: 5])
+    # Intestazione Medico in alto a sinistra
     pdf.set_xy(18, 22)
     pdf.set_font("Times", "B", 10.5)
     pdf.cell(0, 5, dati["nome_medico_bianca"], ln=True)
@@ -587,7 +587,7 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.set_x(28)
     pdf.cell(65, 4, linee_reg[1] if len(linee_reg) > 1 else "", ln=True)
 
-    # Intestazione Destra: Promemoria e Doppio Barcode NRE (Prefisso + Progressivo come reference [source: 6])
+    # Intestazione Destra: Promemoria e Doppio Barcode NRE (Prefisso + Progressivo)
     pdf.set_xy(95, 11)
     pdf.set_font("Helvetica", "B", 7.5)
     pdf.cell(100, 4, "RICETTA ELETTRONICA - PROMEMORIA PER L'ASSISTITO", align="R", ln=True)
@@ -622,7 +622,7 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.cell(70, 3.5, f"*{dati['cf_assistito']}*", align="C", ln=True)
     pdf.image(bc_cf_path, x=125, y=34, w=70, h=9)
 
-    # Griglia Centrale Parametri SSN (Senza esenzione sospetta, dinamica e pulita)
+    # Griglia Centrale Parametri SSN
     pdf.line(10, 45, 200, 45)
     pdf.set_xy(12, 46)
     pdf.set_font("Helvetica", "", 6.8)
