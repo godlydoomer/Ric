@@ -5,7 +5,7 @@ import random
 import difflib
 import asyncio
 from datetime import datetime
-from aiohttp import web
+from aiohttp import web, ClientSession
 import barcode
 from barcode.writer import ImageWriter
 from fpdf import FPDF
@@ -45,8 +45,8 @@ FREE_PASS = "forzafoggia"
 
 VIP_FILE = "vip_users.json"
 CREDITS_FILE = "free_credits.json"
+COMUNI_CACHE_FILE = "comuni_italiani_cache.json"
 
-# Città filtrate dai pulsanti rapidi (ma perfettamente funzionanti se digitate a mano)
 CITTA_ESCLUSE_BOTTONI = {
     "foggia", "san severo", "cerignola", "lucera", "manfredonia",
     "orta nova", "san giovanni rotondo", "torremaggiore", "sannicandro garganico"
@@ -107,7 +107,7 @@ REGIONI_DB = {
 }
 
 # ==========================================
-# DATABASE CITTA' E MEDICI REALISTICI
+# DATABASE CITTA' DI EMISSIONE E MEDICI
 # ==========================================
 CITTA_DB = {
     "foggia": {
@@ -152,6 +152,12 @@ CITTA_DB = {
             {"nome": "COLOMBO ALESSANDRO", "titolo": "Dott.", "via": "Corso Buenos Aires 42,", "tel": "0267483921", "cf": "CLMLSN75A01F205Y"}
         ]
     },
+    "bergamo": {
+        "nome": "Bergamo", "cap": "24121", "prov": "BG", "catastale": "A794", "regione": "lombardia",
+        "medici": [
+            {"nome": "LOCATELLI GIORGIO", "titolo": "Dott.", "via": "Viale Papa Giovanni XXIII 45,", "tel": "035214589", "cf": "LCTGRG71B12A794U"}
+        ]
+    },
     "roma": {
         "nome": "Roma", "cap": "00185", "prov": "RM", "catastale": "H501", "regione": "lazio",
         "medici": [
@@ -192,15 +198,97 @@ CITTA_DB = {
     }
 }
 
-CATASTALI_EXTRA = {
+# Database esteso di tutti i Capoluoghi d'Italia, Comuni principali e Nazioni Estere (Codici Belfiore ufficiali)
+CATASTALI_ITALIA_ESTERO = {
+    # Stati Esteri principali
     "brasile": "Z602", "romania": "Z129", "albania": "Z100", "marocco": "Z330",
     "svizzera": "Z133", "germania": "Z112", "francia": "Z110", "spagna": "Z131",
-    "udine": "L483", "manduria": "E882", "francavilla fontana": "D761",
-    "lecce": "E506", "brindisi": "B180", "palermo": "G273", "genova": "D969",
-    "verona": "L781", "pescara": "G482", "barletta": "A669", "andria": "A285",
-    "trani": "L328", "manfredonia": "E885", "lucera": "E716", "orta nova": "G131",
-    "san giovanni rotondo": "H926", "torremaggiore": "L273"
+    "regno unito": "Z114", "inghilterra": "Z114", "ucraina": "Z138", "tunisia": "Z352",
+    "egitto": "Z336", "cina": "Z210", "argentina": "Z600", "stati uniti": "Z404",
+    "polonia": "Z127", "moldavia": "Z140", "peru": "Z611", "ecuador": "Z605",
+    "colombia": "Z604", "nigeria": "Z335", "senegal": "Z343", "pakistan": "Z236",
+    "india": "Z222", "filippine": "Z216", "bangladesh": "Z249",
+    #Tutti i Capoluoghi di Provincia Italiani + Principali Comuni
+    "agrigento": "A089", "alessandria": "A182", "ancona": "A271", "andria": "A285",
+    "aosta": "A326", "arezzo": "A390", "ascoli piceno": "A462", "asti": "A479",
+    "avellino": "A509", "bari": "A662", "barletta": "A669", "belluno": "A757",
+    "benevento": "A783", "bergamo": "A794", "biella": "A859", "bologna": "A944",
+    "bolzano": "A952", "brescia": "B157", "brindisi": "B180", "cagliari": "B354",
+    "caltanissetta": "B429", "campobasso": "B519", "carbonia": "B745", "caserta": "B963",
+    "catania": "C351", "catanzaro": "C352", "cesena": "C573", "chieti": "C632",
+    "como": "C933", "cosenza": "D086", "cremona": "D150", "crotone": "D122",
+    "cuneo": "D205", "enna": "C342", "fermo": "D542", "ferrara": "D548",
+    "firenze": "D612", "foggia": "D643", "forli": "D704", "frosinone": "D810",
+    "genova": "D969", "gorizia": "E098", "grosseto": "E202", "imperia": "E290",
+    "isernia": "E335", "l'aquila": "A345", "laquila": "A345", "la spezia": "E463",
+    "latina": "E472", "lecce": "E506", "lecco": "E507", "livorno": "E625",
+    "lodi": "E648", "lucca": "E715", "macerata": "E783", "mantova": "E897",
+    "massa": "F023", "matera": "F052", "messina": "F158", "milano": "F205",
+    "modena": "F257", "monza": "F704", "napoli": "F839", "novara": "F952",
+    "nuoro": "F979", "oristano": "G113", "padova": "G224", "palermo": "G273",
+    "parma": "G337", "pavia": "G388", "perugia": "G478", "pesaro": "G479",
+    "pescara": "G482", "piacenza": "G535", "pisa": "G702", "pistoia": "G713",
+    "pordenone": "G888", "potenza": "G942", "prato": "G999", "ragusa": "H163",
+    "ravenna": "H199", "reggio calabria": "H224", "reggio emilia": "H223", "rieti": "H282",
+    "rimini": "H294", "roma": "H501", "rovigo": "H620", "salerno": "H703",
+    "sassari": "I452", "savona": "I480", "siena": "I726", "siracusa": "I754",
+    "sondrio": "I829", "taranto": "L049", "teramo": "L103", "terni": "L117",
+    "torino": "L219", "trani": "L328", "trapani": "L331", "trento": "L378",
+    "treviso": "L407", "trieste": "L424", "udine": "L483", "urbino": "L500",
+    "varese": "L682", "venezia": "L736", "verbania": "L746", "vercelli": "L750",
+    "verona": "L781", "vibo valentia": "F537", "vicenza": "L840", "viterbo": "M082",
+    # Comuni extra Puglia e grandi centri
+    "san severo": "I158", "cerignola": "C514", "manfredonia": "E885", "lucera": "E716",
+    "orta nova": "G131", "san giovanni rotondo": "H926", "torremaggiore": "L273",
+    "sannicandro garganico": "I049", "vieste": "L858", "peschici": "G487",
+    "monte sant'angelo": "F631", "apricena": "A339", "troia": "L447", "bovino": "B104",
+    "ascoli satriano": "A463", "carapelle": "B724", "ordona": "M266", "stornara": "I962",
+    "stornarella": "I963", "zapponeta": "M267", "margherita di savoia": "E946",
+    "trinitapoli": "B915", "san ferdinando di puglia": "H839", "bisceglie": "A883",
+    "molfetta": "F284", "corato": "C983", "ruvo di puglia": "H645", "terlizzi": "L109",
+    "bitonto": "A893", "modugno": "F262", "altamura": "A225", "gravina in puglia": "E155",
+    "monopoli": "F376", "putignano": "H096", "fasano": "D508", "ostuni": "G187",
+    "francavilla fontana": "D761", "manduria": "E882", "martina franca": "E986",
+    "grottaglie": "E205", "massafra": "F027", "gallipoli": "D883", "nardò": "F842",
+    "galatina": "D862", "casarano": "B936", "tricase": "L419", "maglie": "E815",
+    "busto arsizio": "B300", "gallarate": "D869", "saronno": "I441", "sesto san giovanni": "I690",
+    "cinisello balsamo": "C707", "legnano": "E514", "rho": "H264", "cologno monzese": "C895",
+    "paderno dugnano": "G220", "rozzano": "H623", "corsico": "D045", "segrate": "I577",
+    "pioltello": "G686", "abbiategrasso": "A010", "san donato milanese": "H827",
+    "treviglio": "L400", "seriate": "I628", "dalmine": "D245", "romano di lombardia": "H509",
+    "alzano lombardo": "A246", "caravaggio": "B731", "osio sotto": "G159", "ponteranica": "G853"
 }
+
+async def aggiorna_cache_comuni():
+    """Scarica all'avvio tutti gli 8.000+ comuni italiani per avere copertura totale al 100%."""
+    global CATASTALI_ITALIA_ESTERO
+    if os.path.exists(COMUNI_CACHE_FILE):
+        try:
+            with open(COMUNI_CACHE_FILE, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+                CATASTALI_ITALIA_ESTERO.update(cached)
+                return
+        except Exception:
+            pass
+
+    url = "https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json"
+    try:
+        async with ClientSession() as session:
+            async with session.get(url, timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    nuovi = {}
+                    for item in data:
+                        nome_c = item.get("nome", "").strip().lower()
+                        cod_cat = item.get("codiceCatastale", "").strip().upper()
+                        if nome_c and cod_cat:
+                            nuovi[nome_c] = cod_cat
+                    if nuovi:
+                        CATASTALI_ITALIA_ESTERO.update(nuovi)
+                        with open(COMUNI_CACHE_FILE, "w", encoding="utf-8") as f:
+                            json.dump(nuovi, f, ensure_ascii=False)
+    except Exception:
+        pass
 
 # ==========================================
 # DATABASE COMPLETO FARMACI E VARIANTI
@@ -325,13 +413,20 @@ def aggiungi_crediti_gratuiti(user_id: int, quantita: int = 3):
 VIP_USERS = carica_vip()
 
 # ==========================================
-# MOTORE CALCOLO CODICE FISCALE REALE E PARSING
+# MOTORE INTELLIGENTE DI PARSING E CF REALE
 # ==========================================
 LEET_MAP = str.maketrans({
     '4': 'A', '0': 'O', '1': 'I', '3': 'E', '5': 'S', '7': 'T', '8': 'B', '6': 'G', '9': 'G', '2': 'Z'
 })
 
 MESI_CF = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'H', 7: 'L', 8: 'M', 9: 'P', 10: 'R', 11: 'S', 12: 'T'}
+
+MESI_TESTUALI = {
+    "gennaio": 1, "gen": 1, "febbraio": 2, "feb": 2, "marzo": 3, "mar": 3,
+    "aprile": 4, "apr": 4, "maggio": 5, "mag": 5, "giugno": 6, "giu": 6,
+    "luglio": 7, "lug": 7, "agosto": 8, "ago": 8, "settembre": 9, "set": 9,
+    "ottobre": 10, "ott": 10, "novembre": 11, "nov": 11, "dicembre": 12, "dic": 12
+}
 
 ODD_MAP = {
     '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
@@ -347,14 +442,35 @@ EVEN_MAP = {
     'U': 20, 'V': 21, 'W': 22, 'X': 23, 'Y': 24, 'Z': 25
 }
 
+NOMI_MASCHILI = {
+    "MARIO", "LUIGI", "GIOVANNI", "GIUSEPPE", "ANTONIO", "FRANCESCO", "MARCO", "LUCA",
+    "ANDREA", "ALESSANDRO", "MATTEO", "LORENZO", "DAVIDE", "SIMONE", "FEDERICO", "RICCARDO",
+    "STEFANO", "NICOLA", "MICHELE", "FABIO", "PAOLO", "ROBERTO", "DANIELE", "CRISTIAN",
+    "CHRISTIAN", "PIERLUIGI", "VINCENZO", "SALVATORE", "EMANUELE", "PIETRO", "MASSIMO",
+    "CLAUDIO", "MAURIZIO", "PASQUALE", "DOMENICO", "GABRIELE", "SAMUELE", "TOMMASO",
+    "EDOARDO", "LEONARDO", "FILIPPO", "GIANLUCA", "ALESSIO", "RAFFAELE", "GENNARO",
+    "CARMINE", "COSIMO", "DAMIANO", "GAETANO", "CIRO", "ENRICO", "GIORGIO", "ALBERTO",
+    "DIEGO", "MANUEL", "MIRKO", "KEVIN", "DENIS", "IVAN", "SERGIO", "LUCIANO", "CARLO"
+}
+
 NOMI_FEMMINILI = {
     "MARIA", "ANNA", "GIULIA", "FRANCESCA", "SARA", "LAURA", "CHIARA", "MARTINA",
     "VALENTINA", "ALESSIA", "FEDERICA", "ELENA", "SOFIA", "ROBERTA", "GIOVANNA",
-    "PAOLA", "DANIELA", "MONICA", "SILVIA", "BEATRICE", "GIORGIA", "ELISA", "LUCILEIDE"
+    "PAOLA", "DANIELA", "MONICA", "SILVIA", "BEATRICE", "GIORGIA", "ELISA", "LUCILEIDE",
+    "ANTONELLA", "TERESA", "LUCIA", "CARMELA", "ROSA", "ANGELA", "CONCETTA", "RITA",
+    "VALERIA", "CLAUDIA", "VERONICA", "CAMILLA", "ARIANNA", "NOEMI", "AURORA", "ALICE",
+    "GRETA", "VITTORIA", "GINEVRA", "NICOLE", "GAIA", "REBECCA", "IRENE", " CATERINA",
+    "SERENA", "SIMONA", "STEFANIA", "CRISTINA", "BARBARA", "SABRINA", "PATRIZIA",
+    "DEBORA", "DEBORAH", "JESSICA", "VANESSA", "MELISSA", "ILARIA", "SONIA", "NADIA",
+    " ERIKA", "ERICA", "DILETTA", "MIRIAM", "MARTA", "ELEONORA", "CARLOTTA", "BIANCA"
 }
 
+TUTTI_NOMI_PROPRI = NOMI_MASCHILI | NOMI_FEMMINILI
+
+PREFISSI_COGNOME = {"DE", "DI", "DEL", "DELLA", "DELLO", "DEGLI", "DAL", "DALLA", "LA", "LO", "LI", "LE", "VAN", "VON", "SAN", "SANTA"}
+
 def de_leet_parola(parola: str) -> str:
-    pulita = re.sub(r'[^a-zA-Z0-9]', '', parola)
+    pulita = re.sub(r"[^a-zA-Z0-9']", "", parola)
     if not pulita:
         return ""
     if pulita.isdigit():
@@ -404,10 +520,15 @@ def normalizza_anno(aa_str: str) -> int:
     return aa
 
 def analizza_input_paziente_smart(testo_raw: str) -> dict:
+    """
+    Riconosce automaticamente data di nascita, qualsiasi comune italiano/estero (anche con errori di battitura)
+    e distingue tra Nome e Cognome anche se scritti invertiti (es. 'Valentina Melchionda' -> Cognome: MELCHIONDA, Nome: VALENTINA).
+    """
     testo = testo_raw.strip()
     gg, mm, aaaa = 24, 3, 1995
     testo_senza_data = testo
 
+    # 1. Estrazione Data (formati: 24/03/2006, 24-03-06, 24.03.2006, 24 03 2006)
     pattern_num = r'\b(\d{1,2})[\s/\-\.](\d{1,2})[\s/\-\.](\d{2,4})\b'
     m_num = re.search(pattern_num, testo)
     if m_num:
@@ -415,43 +536,111 @@ def analizza_input_paziente_smart(testo_raw: str) -> dict:
         mm = max(1, min(12, int(m_num.group(2))))
         aaaa = normalizza_anno(m_num.group(3))
         testo_senza_data = testo[:m_num.start()] + " " + testo[m_num.end():]
+    else:
+        # Formato testuale: 24 marzo 2006
+        pattern_txt = r'\b(\d{1,2})\s+(' + '|'.join(MESI_TESTUALI.keys()) + r')\s+(\d{2,4})\b'
+        m_txt = re.search(pattern_txt, testo.lower())
+        if m_txt:
+            gg = max(1, min(31, int(m_txt.group(1))))
+            mm = MESI_TESTUALI[m_txt.group(2)]
+            aaaa = normalizza_anno(m_txt.group(3))
+            testo_senza_data = testo[:m_txt.start()] + " " + testo[m_txt.end():]
 
-    luogo_trovato = "foggia"
-    catastale = "D643"
-    tutte_localita = {**{k: v["catastale"] for k, v in CITTA_DB.items()}, **CATASTALI_EXTRA}
-    
+    # Pulizia parole di collegamento ("nato a", "nata il", ecc.)
+    testo_pulito = re.sub(r'\b(nato|nata|nat|il|del|a|in|da)\b', ' ', testo_senza_data, flags=re.IGNORECASE)
+
+    # 2. Riconoscimento Comune di Nascita (Esatto + Fuzzy su tutti i comuni)
+    tutte_localita = {**{k: v["catastale"] for k, v in CITTA_DB.items()}, **CATASTALI_ITALIA_ESTERO}
+    luogo_trovato = None
+    catastale = None
+
+    # A) Ricerca match esatto (partendo dai nomi di comune più lunghi, es. "San Giovanni Rotondo")
+    testo_lower = testo_pulito.lower()
     for loc, cat in sorted(tutte_localita.items(), key=lambda x: len(x[0]), reverse=True):
-        if re.search(rf'\b{re.escape(loc)}\b', testo_senza_data.lower()):
+        if re.search(rf'\b{re.escape(loc)}\b', testo_lower):
             luogo_trovato = loc
             catastale = cat
-            testo_senza_data = re.sub(rf'\b{re.escape(loc)}\b', ' ', testo_senza_data, flags=re.IGNORECASE)
+            testo_pulito = re.sub(rf'\b{re.escape(loc)}\b', ' ', testo_pulito, count=1, flags=re.IGNORECASE)
             break
 
-    testo_pulito = re.sub(r'\b(nato|nata|nat|il|del|a|in|da|di)\b', ' ', testo_senza_data, flags=re.IGNORECASE)
     tokens_raw = [de_leet_parola(t) for t in testo_pulito.split() if t.strip() and not t.isdigit()]
     tokens_raw = [t for t in tokens_raw if t]
 
-    if len(tokens_raw) >= 2:
-        cognome = tokens_raw[0]
-        nome = " ".join(tokens_raw[1:])
-        nome_completo = f"{cognome} {nome}"
-    elif len(tokens_raw) == 1:
-        cognome = tokens_raw[0]
-        nome = "MARIO"
-        nome_completo = f"{cognome} {nome}"
-    else:
-        cognome = "ROSSI"
-        nome = "MARIO"
-        nome_completo = "ROSSI MARIO"
+    # B) Se non ha trovato un match esatto, controlla se una delle parole è un comune scritto con leggero typo (es. "bergmo")
+    if not luogo_trovato and len(tokens_raw) >= 3:
+        for idx in range(len(tokens_raw) - 1, -1, -1):
+            parola_test = tokens_raw[idx].lower()
+            if parola_test.upper() in TUTTI_NOMI_PROPRI or parola_test.upper() in PREFISSI_COGNOME:
+                continue
+            matches = difflib.get_close_matches(parola_test, list(tutte_localita.keys()), n=1, cutoff=0.82)
+            if matches:
+                luogo_trovato = matches[0]
+                catastale = tutte_localita[luogo_trovato]
+                tokens_raw.pop(idx)
+                break
 
+    if not luogo_trovato:
+        luogo_trovato = "foggia"
+        catastale = "D643"
+
+    # 3. Riconoscimento intelligente NOME vs COGNOME (anche invertiti)
+    cognome = "ROSSI"
+    nome = "MARIO"
+
+    if len(tokens_raw) == 1:
+        cognome = tokens_raw[0]
+        nome = "MARIO"
+    elif len(tokens_raw) == 2:
+        t1, t2 = tokens_raw[0], tokens_raw[1]
+        t1_is_nome = t1 in TUTTI_NOMI_PROPRI
+        t2_is_nome = t2 in TUTTI_NOMI_PROPRI
+
+        # Se la prima parola è un nome proprio (es. VALENTINA) e la seconda non lo è (es. MELCHIONDA) -> Inverti!
+        if t1_is_nome and not t2_is_nome:
+            nome = t1
+            cognome = t2
+        elif t2_is_nome and not t1_is_nome:
+            cognome = t1
+            nome = t2
+        else:
+            # Se entrambi o nessuno sono nel set, controlla desinenze tipiche o mantieni standard Cognome Nome
+            cognome = t1
+            nome = t2
+    elif len(tokens_raw) >= 3:
+        # Gestione cognomi composti (es. "De Miro", "Di Palma") o doppi nomi (es. "Maria Teresa")
+        if tokens_raw[0] in PREFISSI_COGNOME:
+            cognome = f"{tokens_raw[0]} {tokens_raw[1]}"
+            nome = " ".join(tokens_raw[2:])
+        elif tokens_raw[-2] in PREFISSI_COGNOME:
+            cognome = f"{tokens_raw[-2]} {tokens_raw[-1]}"
+            nome = " ".join(tokens_raw[:-2])
+        elif tokens_raw[0] in TUTTI_NOMI_PROPRI and tokens_raw[-1] not in TUTTI_NOMI_PROPRI:
+            # Es. "Maria Teresa Loporchio" -> Nome: Maria Teresa, Cognome: Loporchio
+            cognome = tokens_raw[-1]
+            nome = " ".join(tokens_raw[:-1])
+        else:
+            cognome = tokens_raw[0]
+            nome = " ".join(tokens_raw[1:])
+
+    nome_completo = f"{cognome} {nome}"
+
+    # 4. Determinazione Sesso automatico per il calcolo del Codice Fiscale (+40 per le donne)
     primo_nome = nome.split()[0] if nome else "MARIO"
-    sesso = "F" if primo_nome in NOMI_FEMMINILI or cognome in NOMI_FEMMINILI else "M"
+    if primo_nome in NOMI_FEMMINILI:
+        sesso = "F"
+    elif primo_nome in NOMI_MASCHILI:
+        sesso = "M"
+    else:
+        sesso = "F" if primo_nome.endswith("A") and primo_nome not in {"LUCA", "ANDREA", "NICOLA", "MATTIA", "ELIA", "TOBIA"} else "M"
+
     cf_reale = calcola_cf_reale(cognome, nome, gg, mm, aaaa, sesso, catastale)
 
     return {
         "nome_assistito": nome_completo,
         "luogo_nascita": luogo_trovato.title(),
         "cf_assistito": cf_reale,
+        "data_nascita": f"{gg:02d}/{mm:02d}/{aaaa}",
+        "sesso": sesso,
         "indirizzo_assistito": f"{fake.street_address().upper()}"
     }
 
@@ -503,7 +692,6 @@ def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farma
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
-    # Intestazione Medico in alto a sinistra
     pdf.set_xy(18, 22)
     pdf.set_font("Times", "B", 10.5)
     pdf.cell(0, 5, dati["nome_medico_bianca"], ln=True)
@@ -525,7 +713,6 @@ def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farma
     pdf.set_x(18)
     pdf.cell(0, 4.5, f"Tel. {dati['tel_medico']}", ln=True)
 
-    # Blocco Assistito
     pdf.set_xy(18, 68)
     pdf.set_font("Times", "B", 9.5)
     pdf.cell(0, 5, "Assistito", ln=True)
@@ -534,19 +721,16 @@ def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farma
     pdf.set_font("Times", "", 10)
     pdf.cell(0, 5, f"{dati['nome_assistito']} {dati['luogo_nascita'].upper()}", ln=True)
 
-    # Blocco Codice Fiscale + Barcode
     pdf.set_xy(18, 94)
     pdf.set_font("Times", "", 9)
     pdf.cell(0, 5, "Codice Fiscale:", ln=True)
     pdf.image(bc_cf_path, x=24, y=100, w=72, h=13)
 
-    # Blocco Prescrizione + Barcode AIC
     pdf.set_xy(18, 126)
     pdf.set_font("Times", "B", 9.5)
     pdf.cell(0, 5, "Prescrizione:", ln=True)
     pdf.image(bc_farmaco_path, x=21, y=134, w=58, h=13)
 
-    # Testo Farmaco (Zero numero confezioni se ripetibile, N.1Conf. se non ripetibile)
     pdf.set_xy(95, 150)
     pdf.set_font("Times", "", 10)
     prefisso_qta = "" if dati["is_ripetibile"] else "N.1Conf. "
@@ -558,7 +742,6 @@ def crea_pdf_ricetta_bianca(dati: dict, pdf_path: str, bc_cf_path: str, bc_farma
     pdf.set_x(102)
     pdf.cell(0, 5, dati["ripetibilita"], ln=True)
 
-    # Data e Firma in calce
     pdf.set_xy(18, 178)
     pdf.set_font("Times", "", 9.5)
     pdf.cell(90, 5, f"{dati['citta_pura']}, {dati['data_emissione']}", ln=False)
@@ -571,15 +754,12 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.set_auto_page_break(False)
     pdf.add_page()
 
-    # Bordo esterno generale del promemoria SSN
     pdf.rect(10, 10, 190, 132)
 
-    # Logo regionale dinamico se presente
     logo_path = os.path.join(ASSETS_DIR, dati["logo_file"])
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=12, y=12, w=14)
 
-    # Intestazione Sinistra: SSN + Regione
     pdf.set_xy(28, 12)
     pdf.set_font("Helvetica", "B", 8.5)
     linee_reg = dati["header_regione"].splitlines()
@@ -587,12 +767,10 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.set_x(28)
     pdf.cell(65, 4, linee_reg[1] if len(linee_reg) > 1 else "", ln=True)
 
-    # Intestazione Destra: Promemoria e Doppio Barcode NRE (Prefisso + Progressivo)
     pdf.set_xy(95, 11)
     pdf.set_font("Helvetica", "B", 7.5)
     pdf.cell(100, 4, "RICETTA ELETTRONICA - PROMEMORIA PER L'ASSISTITO", align="R", ln=True)
 
-    # Barcode NRE 1 (es. *160A2*) e NRE 2 (es. *4690698333*)
     pdf.image(bc_nre1_path, x=98, y=16, w=32, h=8)
     pdf.image(bc_nre2_path, x=135, y=16, w=60, h=8)
     pdf.set_xy(98, 24.5)
@@ -601,10 +779,8 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.set_x(135)
     pdf.cell(60, 3, f"*{dati['nre_part2']}*", align="C", ln=True)
 
-    # Linea separatrice sotto l'intestazione
     pdf.line(10, 29, 200, 29)
 
-    # Colonna Sinistra: Dati Assistito | Colonna Destra: Barcode Codice Fiscale
     pdf.set_xy(12, 31)
     pdf.set_font("Helvetica", "B", 7.5)
     pdf.cell(110, 4, f"COGNOME E NOME/INIZIALI DELL'ASSISTITO: {dati['nome_assistito']}", ln=True)
@@ -616,13 +792,11 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.set_x(12)
     pdf.cell(110, 4, f"CAP: {dati['cap']} CITTA': {dati['citta_pura'].upper()}   PROV: {dati['prov']}", ln=True)
 
-    # Barcode Codice Fiscale a destra
     pdf.set_xy(125, 30)
     pdf.set_font("Helvetica", "B", 7.5)
     pdf.cell(70, 3.5, f"*{dati['cf_assistito']}*", align="C", ln=True)
     pdf.image(bc_cf_path, x=125, y=34, w=70, h=9)
 
-    # Griglia Centrale Parametri SSN
     pdf.line(10, 45, 200, 45)
     pdf.set_xy(12, 46)
     pdf.set_font("Helvetica", "", 6.8)
@@ -645,7 +819,6 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.set_xy(12, 60)
     pdf.cell(185, 4, "QUESITO DIAGNOSTICO:", ln=True)
 
-    # Blocco Medico e Data
     pdf.line(10, 65, 200, 65)
     pdf.set_xy(12, 66)
     pdf.set_font("Helvetica", "", 7)
@@ -656,7 +829,6 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.cell(95, 4, f"CODICE AUTENTICAZIONE: {dati['cod_autenticazione']}", ln=False)
     pdf.cell(90, 4, f"DATA: {dati['data_emissione']}", ln=True)
 
-    # Tabella Prescrizione
     pdf.line(10, 75, 200, 75)
     pdf.set_xy(12, 76)
     pdf.set_font("Helvetica", "B", 7.5)
@@ -672,7 +844,6 @@ def crea_pdf_ricetta_elettronica(dati: dict, pdf_path: str, bc_nre1_path: str, b
     pdf.cell(18, 5, qta_box, align="C", ln=False)
     pdf.cell(18, 5, "", align="C", ln=True)
 
-    # Footer del Promemoria
     pdf.line(10, 128, 200, 128)
     pdf.set_xy(12, 130)
     pdf.set_font("Helvetica", "", 6)
@@ -770,7 +941,7 @@ async def ricevi_tipo_ricetta(message: Message, state: FSMContext):
     await state.set_state(FormPratica.paziente)
     kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="❌ Annulla")]], resize_keyboard=True)
     await message.answer(
-        "👤 **Dati Assistito**\nInserisci Cognome, Nome, Comune di nascita e Data di nascita (es. `Rossi Mario Milano 15/04/1990`):\n*(Il bot calcolerà il Codice Fiscale reale in automatico)*",
+        "👤 **Dati Assistito**\nInserisci Nome, Cognome, Comune di nascita e Data di nascita in qualsiasi ordine (es. `Valentina Melchionda Bergamo 24/03/2006`):\n*(Il bot riordina automaticamente Cognome e Nome e calcola il vero Codice Fiscale)*",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -781,7 +952,6 @@ async def ricevi_paziente(message: Message, state: FSMContext):
     await state.update_data(**info)
     await state.set_state(FormPratica.citta)
 
-    # Costruzione pulsanti città escludendo Foggia e provincia dai bottoni visibili
     tasti_citta = []
     riga = []
     for k, val in CITTA_DB.items():
@@ -796,9 +966,10 @@ async def ricevi_paziente(message: Message, state: FSMContext):
 
     kb = ReplyKeyboardMarkup(keyboard=tasti_citta, resize_keyboard=True)
     await message.answer(
-        f"✅ Assistito: `{info['nome_assistito']}`\n"
-        f"🆔 CF Calcolato: `{info['cf_assistito']}`\n\n"
-        f"🏥 **Seleziona o digita a mano la città di emissione** (determina automaticamente Medico, ASL, Regione e Logo):",
+        f"✅ **Assistito (Cognome Nome):** `{info['nome_assistito']}`\n"
+        f"📍 **Luogo e Data di nascita:** `{info['luogo_nascita']} ({info['data_nascita']})`\n"
+        f"🆔 **CF Calcolato:** `{info['cf_assistito']}`\n\n"
+        f"🏥 **Seleziona o digita a mano la città di emissione della ricetta** (determina Medico, ASL, Regione e Logo):",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -909,7 +1080,6 @@ async def genera_documento_finale(message: Message, state: FSMContext):
     dati = await state.get_data()
     uid = message.from_user.id
 
-    # Controllo VIP / Crediti / Pagamento BTC
     if uid not in VIP_USERS:
         if not scala_credito(uid):
             prezzo = dati["prezzo_farmaco"]
@@ -973,13 +1143,11 @@ async def genera_documento_finale(message: Message, state: FSMContext):
 
     await state.clear()
 
-# ==========================================
-# WEB SERVER KEEP-ALIVE PER RENDER / UPTIMEROBOT
-# ==========================================
 async def health_check(request):
     return web.Response(text="Bot Ricette Service Operational 24/7.")
 
 async def main():
+    await aggiorna_cache_comuni()
     app = web.Application()
     app.router.add_get("/", health_check)
     runner = web.AppRunner(app)
